@@ -32,7 +32,7 @@ class video_data(data):
             if file_name not in videoData.ignore:
                 videoData.ignore.append(file_name)
 
-    def removeFile(self, names):
+    def remove_file(self, names):
         for file_name in names:
             if file_name in videoData.fileNames:
                 videoData.fileNames.remove(file_name)
