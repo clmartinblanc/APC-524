@@ -14,7 +14,7 @@ class data(abc.ABC):
         pass
 
 
-class videoData(data):
+class video_data(data):
     def __init__(self, dataPath, extension):
         videoData.dataPath = dataPath
         videoData.extension = extension
