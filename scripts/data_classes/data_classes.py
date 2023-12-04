@@ -24,7 +24,7 @@ class video_data(data):
         ]
         videoData.ignore = {}
 
-    def numberCases(self):
+    def number_cases(self):
         return len(self.fileNames)
 
     def ignoreFile(self, names):
