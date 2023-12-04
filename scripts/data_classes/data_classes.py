@@ -42,7 +42,7 @@ class video_data(data):
             if file_name not in videoData.fileNames:
                 videoData.fileNames.append(file_name)
 
-    def updateAll(self):
+    def update_all(self):
         videoData.fileNames = [
             splitext(f)[0] for f in listdir(self.dataPath) if f.endswith(self.extension)
         ]
