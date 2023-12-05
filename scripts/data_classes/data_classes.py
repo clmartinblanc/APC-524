@@ -47,3 +47,10 @@ class VideoData(data):
             splitext(f)[0] for f in listdir(self.dataPath) if f.endswith(self.extension)
         ]
 
+class TableData(data):
+    def __init__(self, dataPath, extension):
+        VideoData.dataPath = dataPath
+        VideoData.extension = extension
+
+    def numberCases(self):
+        pass
