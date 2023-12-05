@@ -69,3 +69,6 @@ class TableData(data):
             data[i] = [float(x) for x in data[i]]
 
         return data
+    
+def test():
+    print("TEST FUNCTION RAN")

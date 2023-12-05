@@ -17,3 +17,4 @@ test_instance = data_classes.TableData("/Users/michaelschroeder/Downloads/test_d
 my_array = test_instance.getArray()
 
 print(my_array)
+
