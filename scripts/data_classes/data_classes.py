@@ -14,35 +14,36 @@ class data(abc.ABC):
         pass
 
 
-class video_data(data):
+class VideoData(data):
     def __init__(self, dataPath, extension):
-        videoData.dataPath = dataPath
-        videoData.extension = extension
+        VideoData.dataPath = dataPath
+        VideoData.extension = extension
         # Read all file names in path with designated extension
-        videoData.fileNames = [
+        VideoData.fileNames = [
             splitext(f)[0] for f in listdir(self.dataPath) if f.endswith(self.extension)
         ]
-        videoData.ignore = {}
+        VideoData.ignore = {}
 
     def number_cases(self):
         return len(self.fileNames)
 
     def ignore_file(self, names):
         for file_name in names:
-            if file_name not in videoData.ignore:
-                videoData.ignore.append(file_name)
+            if file_name not in VideoData.ignore:
+                VideoData.ignore.append(file_name)
 
     def remove_file(self, names):
         for file_name in names:
-            if file_name in videoData.fileNames:
-                videoData.fileNames.remove(file_name)
+            if file_name in VideoData.fileNames:
+                VideoData.fileNames.remove(file_name)
 
     def add_file(self, names):
         for file_name in names:
-            if file_name not in videoData.fileNames:
-                videoData.fileNames.append(file_name)
+            if file_name not in VideoData.fileNames:
+                VideoData.fileNames.append(file_name)
 
     def update_all(self):
-        videoData.fileNames = [
+        VideoData.fileNames = [
             splitext(f)[0] for f in listdir(self.dataPath) if f.endswith(self.extension)
         ]
+
