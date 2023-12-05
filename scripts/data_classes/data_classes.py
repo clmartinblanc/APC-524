@@ -47,6 +47,7 @@ class VideoData(data):
             splitext(f)[0] for f in listdir(self.dataPath) if f.endswith(self.extension)
         ]
 
+
 class TableData(data):
     def __init__(self, dataPath, extension):
         TableData.dataPath = dataPath
@@ -54,21 +55,22 @@ class TableData(data):
 
     def numberCases(self):
         pass
-    
+
     # takes self, returns data in array form
     def getArray(self):
         opened = open(self.dataPath)
         readed = opened.read()
 
         # make string table into array table
-        lines = readed.split('\n')
-        data = [line.split(',') for line in lines]
+        lines = readed.split("\n")
+        data = [line.split(",") for line in lines]
 
         # convert string numbers to float
         for i in range(1, len(data)):
             data[i] = [float(x) for x in data[i]]
 
         return data
-    
+
+
 def test():
     print("TEST FUNCTION RAN")
