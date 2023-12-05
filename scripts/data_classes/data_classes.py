@@ -49,8 +49,23 @@ class VideoData(data):
 
 class TableData(data):
     def __init__(self, dataPath, extension):
-        VideoData.dataPath = dataPath
-        VideoData.extension = extension
+        TableData.dataPath = dataPath
+        TableData.extension = extension
 
     def numberCases(self):
         pass
+    
+    # takes self, returns data in array form
+    def getArray(self):
+        opened = open(self.dataPath)
+        readed = opened.read()
+
+        # make string table into array table
+        lines = readed.split('\n')
+        data = [line.split(',') for line in lines]
+
+        # convert string numbers to float
+        for i in range(1, len(data)):
+            data[i] = [float(x) for x in data[i]]
+
+        return data
