@@ -6,7 +6,7 @@ This part of the repository contains various scripts and files that are essentia
 
 This section includes diverse file types, each serving a specific purpose:
 
-- **Data Preparation Scripts**: These scripts are designed to prepare and clean the data for further manipulation. They are crucial in the initial stages of our workflow.
+- **Data Preparation Scripts**: These scripts are designed to prepare and clean the data for further manipulation, as `Postprocessing.ipynb` . They are crucial in the initial stages of our workflow.
 
 - **Analysis Notebooks**: Once we have the data in a cleaner and more usable format, you can utilize notebooks like `Spectra.ipynb` and `Graphs.ipynb` for in-depth analysis.
 
