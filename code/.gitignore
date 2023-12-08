@@ -1,0 +1,6 @@
+# Ignorar files .out
+*.out
+
+# Ignor folders with 'ak' and 'wave'
+ak*/
+wave*/
