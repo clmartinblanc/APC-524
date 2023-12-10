@@ -3,7 +3,7 @@
 Hi
 
 <!-- prettier-ignore-start -->
-[actions-badge]:            https://github.com/clmartinblanc/APC-524/workflows/CI/badge.svg
-[actions-link]:             https://github.com/clmartinblanc/APC-524/actions
+[actions-badge]:            https://github.com/schroeder-m/hw6/workflows/CI/badge.svg
+[actions-link]:             https://github.com/schroeder-m/hw6/actions
 
 <!-- prettier-ignore-end -->
