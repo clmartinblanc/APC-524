@@ -2,11 +2,11 @@
 
 ## 12/8/2023
 
-I add a .gitignore so the data is not upload to the repository. I clean more the code so the functions are in a .py and the scripts are in the notebooks. 
+I add a .gitignore so the data is not upload to the repository. I clean more the code so the functions are in a .py and the scripts are in the notebooks.
 
 ## 12/4/2023
 
-I add some codes in the repository. I will add a description inside the code folder. 
+I add some codes in the repository. I will add a description inside the code folder.
 
 ## 11/16/2023
 
