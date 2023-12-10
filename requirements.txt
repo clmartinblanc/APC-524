@@ -1,5 +1,6 @@
 ipykernel>=6.0.0
 matplotlib>=3.5.0
+nox>=1.0.0
 numpy>=1.22.0
 pandas>=2.0.0
 pre-commit>=2.3.0
