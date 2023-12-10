@@ -1,3 +1,4 @@
+black>= 22.0.0
 ipykernel>=6.0.0
 matplotlib>=3.5.0
 nox>=1.0.0
