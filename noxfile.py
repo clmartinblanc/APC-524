@@ -4,12 +4,12 @@ import nox
 
 
 @nox.session
-def tests(session):
-    session.install("-r", "requirements.txt")
-    session.run("pytest")
+def format(session):
+    session.install("black")
+    session.run("black", "code", "tests", "scripts")
 
 
 @nox.session
-def format(session):
-    session.install("black")
-    session.run("black", "src", "tests")
+def tests(session):
+    session.install("-r", "requirements.txt")
+    session.run("pytest")
