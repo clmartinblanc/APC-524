@@ -211,9 +211,9 @@ def mom_flux_v(Sxx,Sxy,Sxz,Syy,Syz,Szz,nx,ny,nz,mu2):
     return mf_vx,mf_vy,mf_vz
 #
 def ene_flux_p(pre,u_x,u_y,u_z,nx,ny,nz):
-    """"
+    """
     Compute the mean pressure pre_mean, the mean velocity in each direction and the energy flux due to pressure
-    """"
+    """
     pre_mean = np.average(pre);
     u_x_mean = np.average(u_x);
     u_y_mean = np.average(u_y);
