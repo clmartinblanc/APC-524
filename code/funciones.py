@@ -253,9 +253,9 @@ def mom_flux_v(Sxx, Sxy, Sxz, Syy, Syz, Szz, nx, ny, nz, mu2):
     """ "
     Compute momentum flux due to viscous dissipation
     """
-    mf_vx = +mu2 * np.average((Sxx[:] * nx[:] + Sxy[:] * ny[:] + Sxz[:] * nz[:]))
-    mf_vy = +mu2 * np.average((Sxy[:] * nx[:] + Syy[:] * ny[:] + Syz[:] * nz[:]))
-    mf_vz = +mu2 * np.average((Sxz[:] * nx[:] + Syz[:] * ny[:] + Szz[:] * nz[:]))
+    mf_vx = +mu2 * np.average(Sxx[:] * nx[:] + Sxy[:] * ny[:] + Sxz[:] * nz[:])
+    mf_vy = +mu2 * np.average(Sxy[:] * nx[:] + Syy[:] * ny[:] + Syz[:] * nz[:])
+    mf_vz = +mu2 * np.average(Sxz[:] * nx[:] + Syz[:] * ny[:] + Szz[:] * nz[:])
     #
     return mf_vx, mf_vy, mf_vz
 
