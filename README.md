@@ -1,10 +1,5 @@
-# APC-524
-[![Actions Status][actions-badge]][actions-link]
+# APC-524 Final Project
 
-Hi
+[![.github/workflows/ci.yml](https://github.com/clmartinblanc/APC-524/actions/workflows/ci.yml/badge.svg)](https://github.com/clmartinblanc/APC-524/actions/workflows/ci.yml)
 
-<!-- prettier-ignore-start -->
-[actions-badge]:            https://github.com/clmartinblanc/APC-524/workflows/CI/badge.svg
-[actions-link]:             https://github.com/clmartinblanc/APC-524/actions
-
-<!-- prettier-ignore-end -->
+Will add to this
