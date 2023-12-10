@@ -5,7 +5,7 @@ import nox
 
 @nox.session
 def format(session):
-    session.install("black")
+    session.install("black", "black[jupyter]")
     session.run("black", "code", "tests", "scripts")
 
 
