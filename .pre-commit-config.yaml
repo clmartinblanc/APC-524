@@ -3,7 +3,6 @@ repos:
     rev: 23.3.0
     hooks:
       - id: black
-        python: python3.9
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1 # ref
