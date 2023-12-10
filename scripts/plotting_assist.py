@@ -5,6 +5,7 @@ Reorganizing the plotting stuff into a library of plotting tools that we can use
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 def vec_field_example():
     # creating mesh
     x, y = np.meshgrid(np.linspace(-4, 4, 10), np.linspace(-4, 4, 10))
