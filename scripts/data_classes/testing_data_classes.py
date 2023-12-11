@@ -1,7 +1,7 @@
 """
-I put test_data.txt in git so everyone can have it. 
+I put test_data.txt in git so everyone can have it.
 
-The code runs using this file stored in your personal computer. 
+The code runs using this file stored in your personal computer.
 
 Change the filepath to where it is stored.
 """

@@ -1,4 +1,13 @@
-pre-commit>=2.3.0,<3.0
-numpy>=1.22.0,<1.23.0
-pandas>=2.0.0,<2.1.0
+black>= 22.0.0
+black[jupyter]
+ipykernel>=6.0.0
+matplotlib>=3.5.0
+nox>=1.0.0
+numpy>=1.22.0
+pandas>=2.0.0
+pre-commit>=2.3.0
 pytest>=7.0.0,<8.0.0
+scikit-learn>=1.2.0
+scipy>=1.7.0
+tqdm>=4.0.0
+uncertainties>=3.0.0

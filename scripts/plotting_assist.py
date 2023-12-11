@@ -1,9 +1,10 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
 """
 Reorganizing the plotting stuff into a library of plotting tools that we can use throughout our scripts
 """
 
-import numpy as np
-import matplotlib.pyplot as plt
 
 def vec_field_example():
     # creating mesh
