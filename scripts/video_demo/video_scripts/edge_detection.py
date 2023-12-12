@@ -7,6 +7,7 @@ def edge_detection(data_structure):
 
     # These parameters will be part of the function form input
     DATA_DIR = r"./data/Data_RunA"
+    SAVE_DIR = r"./output"
     ext = ".png"
 
     # Generate a list of all image files in the target folder
@@ -46,5 +47,8 @@ def edge_detection(data_structure):
                 y[i] = b
 
     # Convert arrays to datatable
+    d = {"x": x, "y": y, "r": r}
+    data_table = pd.DataFrame(data=d)
 
-    # OUTPUTTING TO CSV HERE!
+    # Output to .csv
+    data_table.to_csv(join(SAVE_DIR, fname + ".csv"), index=False)
