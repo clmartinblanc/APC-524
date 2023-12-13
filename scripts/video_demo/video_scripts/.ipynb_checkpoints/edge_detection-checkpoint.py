@@ -1,4 +1,16 @@
-def edge_detection(data_structure):
+import cv2
+import matplotlib.pyplot as plt
+from matplotlib import colors
+import numpy as np
+from os.path import join, splitext
+from os import listdir
+import pandas as pd
+import sys
+import os
+import importlib
+
+
+def edge_detection(data_structure, n: int):
     """
     edge_detection reads the data as defined in data_structure and measures the center of a circle vs time.
     The results are outputted to a .csv file with the path defined in data_structure
@@ -6,9 +18,10 @@ def edge_detection(data_structure):
     """
 
     # These parameters will be part of the function form input
-    DATA_DIR = r"./data/Data_RunA"
-    SAVE_DIR = r"./output"
-    ext = ".png"
+    FNAME = data_structure.data_folders[n]
+    DATA_DIR = data_structure.data_path + "/" + FNAME
+    SAVE_DIR = data_structure.save_path
+    ext = data_structure.extension
 
     # Generate a list of all image files in the target folder
     im_list = sorted(splitext(f)[0] for f in listdir(DATA_DIR) if f.endswith(ext))
@@ -51,4 +64,7 @@ def edge_detection(data_structure):
     data_table = pd.DataFrame(data=d)
 
     # Output to .csv
-    data_table.to_csv(join(SAVE_DIR, fname + ".csv"), index=False)
+    if not os.path.exists(SAVE_DIR):
+        os.makedirs(SAVE_DIR)
+
+    data_table.to_csv((SAVE_DIR + "/" + FNAME + ".csv"), index=False)

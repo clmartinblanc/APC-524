@@ -1,6 +1,7 @@
 import abc
 from os import listdir
 from os.path import splitext
+import numpy as np
 
 
 class data(abc.ABC):
@@ -30,7 +31,7 @@ class VideoData(data):
         ]
 
     def number_cases(self):
-        return len(self.file_names)
+        return len(self.data_folders)
 
     def ignore_file(self, names):
         for file_name in names:
@@ -53,6 +54,10 @@ class VideoData(data):
             for f in listdir(self.data_path)
             if f.endswith(self.extension)
         ]
+
+    def run_script(self, script):
+        for n in np.arange(0, self.number_cases(), 1):
+            script(self, n)
 
 
 class TableData(data):
