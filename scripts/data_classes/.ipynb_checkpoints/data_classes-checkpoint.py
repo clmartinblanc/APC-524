@@ -16,8 +16,10 @@ class data(abc.ABC):
 
 
 class VideoData(data):
-    def __init__(self, data_path, extension):
+    def __init__(self, data_path, save_path, extension):
         VideoData.data_path = data_path
+        VideoData.save_path = save_path
+
         VideoData.extension = extension
         # Read all subfolders in path
         VideoData.data_folders = listdir(self.data_path)
@@ -29,6 +31,10 @@ class VideoData(data):
             for f in listdir(self.data_path + "/" + self.data_folders[n])
             if f.endswith(self.extension)
         ]
+
+
+    def output_files(self):
+        return listdir(self.save_path)
 
     def number_cases(self):
         return len(self.data_folders)
@@ -55,9 +61,14 @@ class VideoData(data):
             if f.endswith(self.extension)
         ]
 
-    def run_script(self, script):
+
+    def run_script_n(self, script):
         for n in np.arange(0, self.number_cases(), 1):
             script(self, n)
+
+    def run_script(self, script):
+        script(self)
+
 
 
 class TableData(data):
