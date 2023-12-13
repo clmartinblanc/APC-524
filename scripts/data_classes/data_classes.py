@@ -18,13 +18,16 @@ class VideoData(data):
     def __init__(self, data_path, extension):
         VideoData.data_path = data_path
         VideoData.extension = extension
-        # Read all file names in path with designated extension
-        VideoData.file_names = [
+        # Read all subfolders in path
+        VideoData.data_folders = listdir(self.data_path)
+        VideoData.ignore = {}
+
+    def file_names(self, n):
+        return [
             splitext(f)[0]
-            for f in listdir(self.data_path)
+            for f in listdir(self.data_path + "/" + self.data_folders[n])
             if f.endswith(self.extension)
         ]
-        VideoData.ignore = {}
 
     def number_cases(self):
         return len(self.file_names)
