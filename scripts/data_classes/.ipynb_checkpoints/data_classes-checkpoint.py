@@ -32,7 +32,6 @@ class VideoData(data):
             if f.endswith(self.extension)
         ]
 
-
     def output_files(self):
         return listdir(self.save_path)
 
@@ -61,14 +60,12 @@ class VideoData(data):
             if f.endswith(self.extension)
         ]
 
-
     def run_script_n(self, script):
         for n in np.arange(0, self.number_cases(), 1):
             script(self, n)
 
     def run_script(self, script):
         script(self)
-
 
 
 class TableData(data):

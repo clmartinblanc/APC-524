@@ -35,7 +35,6 @@ class VideoData(data):
     def output_files(self):
         return listdir(self.save_path)
 
-
     def number_cases(self):
         return len(self.data_folders)
 
@@ -67,7 +66,6 @@ class VideoData(data):
 
     def run_script(self, script):
         script(self)
-
 
 
 class TableData(data):
