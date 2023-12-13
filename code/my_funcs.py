@@ -212,7 +212,6 @@ integral = []
 polar_integral = []
 
 
-
 def spectrum_integration(eta, N, L, CHECK=False):
     """
     Perform azimuthal integration of a 2D spectrum.
@@ -309,9 +308,19 @@ def spectrum_integration(eta, N, L, CHECK=False):
     )
 
 
+# common for all cases
+L0 = 2.0 * np.pi
+h = 1
+u_s = 0.25
+N = 512
+k_ = 4
+rho_r = 1000 / 1.225
+Re_tau = 720
+rho1 = 1
+rho2 = rho1 / rho_r
+mu2 = rho2 * u_s * (L0 - h) / Re_tau
+tot_row = 18
 
-
-# for Save_data.ipynb
 
 def extract_custar_from_dir(work_dir):
     """
@@ -332,6 +341,7 @@ def extract_direction_from_dir(work_dir):
     if match:
         return match.group(1)
     return "Unknown"
+
 
 def process_directory(work_dir, L0, N, tot_row, k_, mu2):
     custar_suffix = extract_custar_from_dir(work_dir)
@@ -521,9 +531,7 @@ def process_directory(work_dir, L0, N, tot_row, k_, mu2):
 
         print("Final print of glo_obs alt")
         f = open(f"glo_obs_post_alt__{direction}_{custar_suffix}.out", "a")
-        f.write(
-            "%.15f %.15f %.15f %.15f \n" % (1.0 * istep, time, mf_px_alt, mf_vx_alt)
-        )
+        f.write(f"{1.0 * istep:.15f} {time:.15f} {mf_px_alt:.15f} {mf_vx_alt:.15f} \n")
         f.flush()
         f.close()
 
