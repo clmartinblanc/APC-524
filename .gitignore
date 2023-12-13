@@ -97,3 +97,6 @@ cython_debug/
 
 # OSX
 .DS_Store
+
+# Michael's venv
+fin_proj_venv
