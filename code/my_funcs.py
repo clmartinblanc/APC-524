@@ -727,3 +727,106 @@ def plot_data_water_color(ax, istep, time, direction, color, marker, custar_suff
                 linewidth=0.5,
                 alpha=0.5,
             )
+
+
+# for postprocessing.ipynb
+
+
+def process_data(work_dir):
+    N = 512
+    L0 = 2 * np.pi
+
+    # Leer el archivo de texto
+    data = np.loadtxt(os.path.join(work_dir, "eta/global_int.out"))
+    istep_c, time = data[:, 1], data[:, 0]
+
+    eta_series = np.zeros((istep_c.shape[0], N, N), dtype=np.float32)
+
+    for j, i in enumerate(istep_c):
+        etalo = np.fromfile(
+            os.path.join(work_dir, f"eta/eta_loc/eta_loc_t0000{int(i)}.bin")
+        )
+        etalo = etalo.reshape([int(etalo.size / 18), 18])
+
+        etal = [row for row in etalo if abs(row[12] - 1.0) < 0.20]
+        etal = np.array(etal)
+
+        xarray = np.linspace(-L0 / 2, L0 / 2, N, endpoint=False) + L0 / (2 * N)
+        yarray = xarray  # Son iguales en este contexto
+        xtile, ytile = np.meshgrid(xarray, yarray)
+        eta = griddata(
+            (etal[:, 0].ravel(), etal[:, 1].ravel()),
+            etal[:, 12].ravel(),
+            (xtile, ytile),
+            method="nearest",
+        )
+
+        eta_series[j] = eta
+
+    patterns = [
+        "ux_2d_avg_{:09d}.bin",
+        "uy_2d_avg_{:09d}.bin",
+        "uz_2d_avg_{:09d}.bin",
+        "fv_2d_avg_{:09d}.bin",
+        "pr_2d_avg_{:09d}.bin",
+    ]
+    data_list = []
+
+    for i_int, t in zip(istep_c, time):
+        data_dict = {"i": i_int, "t": t}
+
+        for idx, pattern in enumerate(patterns):
+            filename = pattern.format(int(i_int))
+            file_path = os.path.join(work_dir + "field/", filename)
+
+            if os.path.exists(file_path):
+                array_data = np.fromfile(file_path)
+                reshaped_data = array_data.reshape((N, N))
+
+                if idx == 0:
+                    data_dict["ux"] = reshaped_data
+                    data_dict["ux_mean"] = np.average(reshaped_data, axis=0)
+                elif idx == 1:
+                    data_dict["uy"] = reshaped_data
+                    data_dict["uy_mean"] = np.average(reshaped_data, axis=0)
+                elif idx == 2:
+                    data_dict["uz"] = reshaped_data
+                    data_dict["uz_mean"] = np.average(reshaped_data, axis=0)
+                elif idx == 3:
+                    data_dict["fv"] = reshaped_data
+                elif idx == 4:
+                    data_dict["pressure"] = reshaped_data
+
+        data_list.append(data_dict)
+
+    return pd.DataFrame(data_list)
+
+
+def process_and_plot(work_dir, ax, cmap_name):
+    custar_value = extract_custar_from_dir(work_dir)
+    ax.set_title(f"c/ustar = {custar_value}")
+
+    df = process_data(work_dir)
+
+    # Filtrar tiempos para reducir la superposición
+    unique_times = df["t"].unique()
+    sampled_times = unique_times[::5]
+
+    cmap = plt.get_cmap(cmap_name, len(sampled_times))
+
+    for idx, time in enumerate(sampled_times):
+        df_time = df[df["t"] == time]
+        ux_means = df_time["ux_mean"].values[0]
+        ax.plot(y, ux_means / ustar, color=cmap(idx), lw=1.0, linestyle="-")
+
+    cbar = plt.colorbar(
+        plt.cm.ScalarMappable(cmap=cmap),
+        ax=ax,
+        orientation="vertical",
+        fraction=0.05,
+        pad=0.05,
+    )
+    cbar.set_label("Time", size=12)
+
+    cbar.set_ticks(np.linspace(0, 1, len(sampled_times)))
+    cbar.set_ticklabels([f"{time:.2f}" for time in sampled_times])
