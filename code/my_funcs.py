@@ -830,3 +830,116 @@ def process_and_plot(work_dir, ax, cmap_name):
 
     cbar.set_ticks(np.linspace(0, 1, len(sampled_times)))
     cbar.set_ticklabels([f"{time:.2f}" for time in sampled_times])
+
+
+# for spectra.ipynb
+
+
+def spectrum_integration(eta, N, L, CHECK=False):
+    """
+    Input :
+        - eta
+        - N : number of points
+        - L : length domain
+
+    Ouput :
+        - k , kx , ky , theta : wavenumber vector , his components in x and y , angle theta
+        - F_center: F(kx, ky)
+        - F_center_polar: F(k,theta)
+        - F_center_polar_integrated : F(k) (azimuthal integration of the 2D spectrum)
+        - k_tile , theta_tile : mesh in (k,theta)
+        - kxp_tile, kyp_tile : mesh in (kx,ky) from (k,theta)
+        - variance, integral, polar_integral : list for checking
+
+    """
+
+    varr = np.var(eta)
+    if CHECK:
+        print("var", varr)
+    variance.append(varr)
+
+    # print('mean', np.mean(eta))
+
+    wavenumber = 2 * np.pi * np.fft.fftfreq(N, L / N)
+    kx = np.fft.fftshift(wavenumber)
+    ky = kx
+    kx_tile, ky_tile = np.meshgrid(kx, ky)
+
+    theta = np.linspace(-np.pi, np.pi, 100)
+
+    # xs = 2*m.pi ; ys=xs
+    # rmax = (xs**2 + ys**2)**0.5
+    # radii = np.linspace(0, rmax, 100, endpoint=True)
+
+    k = wavenumber[0 : int(N / 2)]
+    dkx = kx[1] - kx[0]
+    dky = ky[1] - ky[0]
+    dk = k[1] - k[0]
+    dtheta = theta[1] - theta[0]
+
+    spectrum = np.fft.fft2(eta / (N * N) ** 0.5)  # FFT normalization
+    F = (
+        np.absolute(spectrum) ** 2 / N**2 / (dkx * dky)
+    )  # Per area normalization -> F(kx,ky)
+
+    if CHECK:
+        print("sum F", np.sum(F))
+    F_center = np.fft.fftshift(
+        F, axes=(0, 1)
+    )  # Further normalization by independent variables
+
+    k_tile, theta_tile = np.meshgrid(k, theta)
+    kxp_tile, kyp_tile = pol2cart(k_tile, theta_tile)
+
+    integ = np.sum(F_center) * dkx * dky  # F
+    if CHECK:
+        print("integral", integ)
+    integral.append(integ)
+
+    F_center_polar = scipy.interpolate.griddata(
+        (kx_tile.ravel(), ky_tile.ravel()),
+        F_center.ravel(),
+        (kxp_tile, kyp_tile),
+        method="nearest",
+        fill_value=0,
+    )  # F(k,theta)
+
+    F_center_polar_integrated = (
+        np.sum(F_center_polar * k_tile, axis=0) * dtheta
+    )  # Azimuthal integration
+    int_pol = np.sum(F_center_polar_integrated) * dk  # F
+    if CHECK:
+        print("sum polar integrated", int_pol)
+
+    if CHECK:
+        print(
+            "F center",
+            F_center.shape,
+            "F polar",
+            F_center_polar.shape,
+            "F center polar integrated",
+            F_center_polar_integrated.shape,
+        )
+
+    polar_integral.append(int_pol)
+
+    return (
+        k,
+        F_center,
+        F_center_polar_integrated,
+        F_center_polar,
+        k_tile,
+        kxp_tile,
+        kyp_tile,
+        theta_tile,
+        theta,
+        variance,
+        integral,
+        polar_integral,
+        kx,
+        ky,
+    )
+
+
+def exponential_func(x, a, b):
+    return a * np.exp(b * x)
