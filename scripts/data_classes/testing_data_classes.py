@@ -16,6 +16,6 @@ import pandas as pd
 test_instance = data_classes.TableData(
     "/Users/michaelschroeder/Downloads/test_data.txt", ".txt"
 )
-my_array = test_instance.getArray()
+my_array = test_instance.get_array()
 
 print(my_array)

@@ -5,27 +5,29 @@ from os.path import splitext
 
 class data(abc.ABC):
     @abc.abstractmethod
-    def __init__(self, dataPath, extension):
-        self.dataPath = dataPath
+    def __init__(self, data_path, extension):
+        self.data_path = data_path
         self.extension = extension
 
     @abc.abstractmethod
-    def numberCases(self):
+    def number_cases(self):
         pass
 
 
 class VideoData(data):
-    def __init__(self, dataPath, extension):
-        VideoData.dataPath = dataPath
+    def __init__(self, data_path, extension):
+        VideoData.data_path = data_path
         VideoData.extension = extension
         # Read all file names in path with designated extension
-        VideoData.fileNames = [
-            splitext(f)[0] for f in listdir(self.dataPath) if f.endswith(self.extension)
+        VideoData.file_names = [
+            splitext(f)[0]
+            for f in listdir(self.data_path)
+            if f.endswith(self.extension)
         ]
         VideoData.ignore = {}
 
     def number_cases(self):
-        return len(self.fileNames)
+        return len(self.file_names)
 
     def ignore_file(self, names):
         for file_name in names:
@@ -34,31 +36,33 @@ class VideoData(data):
 
     def remove_file(self, names):
         for file_name in names:
-            if file_name in VideoData.fileNames:
-                VideoData.fileNames.remove(file_name)
+            if file_name in VideoData.file_names:
+                VideoData.file_names.remove(file_name)
 
     def add_file(self, names):
         for file_name in names:
-            if file_name not in VideoData.fileNames:
-                VideoData.fileNames.append(file_name)
+            if file_name not in VideoData.file_names:
+                VideoData.file_names.append(file_name)
 
     def update_all(self):
-        VideoData.fileNames = [
-            splitext(f)[0] for f in listdir(self.dataPath) if f.endswith(self.extension)
+        VideoData.file_names = [
+            splitext(f)[0]
+            for f in listdir(self.data_path)
+            if f.endswith(self.extension)
         ]
 
 
 class TableData(data):
-    def __init__(self, dataPath, extension):
-        TableData.dataPath = dataPath
+    def __init__(self, data_path, extension):
+        TableData.data_path = data_path
         TableData.extension = extension
 
-    def numberCases(self):
+    def number_cases(self):
         pass
 
     # takes self, returns data in array form
-    def getArray(self):
-        opened = open(self.dataPath)
+    def get_array(self):
+        opened = open(self.data_path)
         readed = opened.read()
 
         # make string table into array table
