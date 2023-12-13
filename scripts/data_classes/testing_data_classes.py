@@ -9,11 +9,11 @@ Change the filepath to where it is stored.
 print("\n--------------\n")
 
 import numpy as np
-import data_classes
+import scripts.data_classes.data_classes_py as data_classes_py
 import pandas as pd
 
 
-test_instance = data_classes.TableData(
+test_instance = data_classes_py.TableData(
     "/Users/michaelschroeder/Downloads/test_data.txt", ".txt"
 )
 my_array = test_instance.get_array()

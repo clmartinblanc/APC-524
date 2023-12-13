@@ -84,5 +84,5 @@ class TableData(data):
         return data
 
 
-def test():
-    print("TEST FUNCTION RAN")
+def add2(x):
+    return x + 2
