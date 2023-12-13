@@ -13,9 +13,7 @@ import data_classes as data_classes_py
 import pandas as pd
 
 
-test_instance = data_classes_py.TableData(
-    "/Users/michaelschroeder/Downloads/test_data.txt", ".txt"
-)
+test_instance = data_classes_py.TableData("scripts/data_classes/test_data.txt", ".txt")
 my_array = test_instance.get_array()
 
 print(my_array)
