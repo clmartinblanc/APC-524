@@ -308,6 +308,8 @@ def spectrum_integration(eta, N, L, CHECK=False):
     )
 
 
+# for Save_data.ipynb
+
 # common for all cases
 L0 = 2.0 * np.pi
 h = 1
@@ -562,3 +564,166 @@ def process_directory(work_dir, L0, N, tot_row, k_, mu2):
             )
         f.flush()
         f.close()
+
+
+# for Graphs.ipynb
+
+
+def read_files_to_dfs(direction, custar_suffix):
+    """
+    Reads data from specified files and transforms it into Pandas DataFrames.
+
+    This function reads two types of files: 'glo_obs_post__' and 'glo_obs_post_alt__',
+    both of which are expected to have a specific suffix and direction in their filenames.
+    The data from these files is loaded into numpy arrays and then converted into Pandas DataFrames.
+    Each DataFrame is structured with specific columns based on the file content.
+
+    Parameters:
+    - direction (str): A string parameter that specifies the direction of the wind (forward or backward).
+    - custar_suffix (str): A string parameter that defines the custom c/u* (2,4 or 8).
+
+    Returns:
+    - df_glo_obs (DataFrame): A DataFrame containing data from the 'glo_obs_post__' file.
+      Columns include 'istep', 'time', 'ak', 'mf_px', 'mf_py', 'mf_pz', 'en_p', 'en_v'.
+      The 'time' column is adjusted to start from 0.
+    - df_glo_obs_alt (DataFrame): A DataFrame containing data from the 'glo_obs_post_alt__' file.
+      Columns include 'istep', 'time', 'mf_px_alt', 'mf_vx_alt'.
+      Similar to df_glo_obs, the 'time' column in this DataFrame is also adjusted to start from 0, it doesn't start in 0 directly because we use a precursor for the turbulence
+
+    """
+
+    # Reading the glo_obs file
+    filename_glo = f"glo_obs_post__{direction}_{custar_suffix}.out"
+    data_glo_obs = np.loadtxt(filename_glo)
+    df_glo_obs = pd.DataFrame(
+        data_glo_obs,
+        columns=["istep", "time", "ak", "mf_px", "mf_py", "mf_pz", "en_p", "en_v"],
+    )
+
+    # Adjust the 'time' column to start from 0
+    df_glo_obs["time"] = df_glo_obs["time"] - df_glo_obs["time"].iloc[0]
+
+    # Reading the glo_obs_alt file
+    filename_glo_alt = f"glo_obs_post_alt__{direction}_{custar_suffix}.out"
+    data_glo_obs_alt = np.loadtxt(filename_glo_alt)
+    df_glo_obs_alt = pd.DataFrame(
+        data_glo_obs_alt, columns=["istep", "time", "mf_px_alt", "mf_vx_alt"]
+    )
+
+    # Adjust the 'time' column in the alt DataFrame to start from 0
+    df_glo_obs_alt["time"] = df_glo_obs_alt["time"] - df_glo_obs_alt["time"].iloc[0]
+
+    return df_glo_obs, df_glo_obs_alt
+
+
+def plot_data_air(ax, istep, time, direction, cmap, norm, custar_suffix):
+    """
+    Plots air property data for various time steps on a matplotlib Axes.
+
+    Parameters:
+    - ax (matplotlib.axes.Axes): Axes object for plotting.
+    - istep (iterable): Time steps for data files.
+    - time (iterable): Corresponding time values for color mapping.
+    - direction (str): Direction part of the filename.
+    - cmap (Colormap): Colormap for plot colors.
+    - norm (Normalize): Normalization for time values.
+    - custar_suffix (str): Suffix for the filename.
+
+    The function reads data from specified files, extracts air properties,
+    and plots them on 'ax'. Each time step's data is colored using 'cmap'
+    and 'norm' based on the corresponding time value.
+    """
+    for i, t in zip(istep, time):
+        formatted_i = f"{int(i):09d}"
+        filename_wf = f"wave_coord_{direction}_{custar_suffix}/prof_wf_{direction}_{custar_suffix}{formatted_i}.out"
+        if os.path.exists(filename_wf):
+            data_wf = np.loadtxt(filename_wf)
+            zeta_air = data_wf[:, 0]
+            ux_air_1d_wf = data_wf[:, 2]
+            ax.plot(zeta_air, ux_air_1d_wf, color=cmap(norm(t)))
+
+
+def darken_color(color, factor=0.7):
+    """Darkens a given hexadecimal color."""
+    r, g, b = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
+    r = int(r * factor)
+    g = int(g * factor)
+    b = int(b * factor)
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+def plot_data_air_color(ax, istep, time, direction, color, marker, custar_suffix):
+    """Plot data with specific color and marker based on direction and custar_suffix."""
+    for i, t in zip(istep, time):
+        formatted_i = f"{int(i):09d}"
+        filename_wf = f"wave_coord_{direction}_{custar_suffix}/prof_wf_{direction}_{custar_suffix}{formatted_i}.out"
+        if os.path.exists(filename_wf):
+            data_wf = np.loadtxt(filename_wf)
+            zeta_air = data_wf[:, 0]
+            ux_air_1d_wf = data_wf[:, 2]
+            label = f"{direction} custar {custar_suffix} at time {t}"
+            # Darken the color for the last time step
+            if t == time[-1]:
+                color = darken_color(color)
+            ax.plot(
+                zeta_air,
+                ux_air_1d_wf,
+                color=color,
+                marker=marker,
+                markersize=7,
+                label=label,
+                linewidth=0.5,
+                alpha=0.5,
+            )
+
+
+# Define different symbols for forward and backward directions
+markers = {"forward": "o", "backward": "x"}
+
+
+# Function to plot water data on a specific axis
+def plot_water_data(ax, istep, time, direction, cmap, norm, suffix):
+    for i, t in zip(istep, time):
+        formatted_i = f"{int(i):09d}"  # Format the timestep for file naming
+        # Constructing the filename based on direction and suffix
+        filename_wf = f"wave_coord_{direction}_{suffix}/prof_wf_{direction}_{suffix}{formatted_i}.out"
+        # Load the data from the file
+        data_wf = np.loadtxt(filename_wf)
+        # Extracting water spatial coordinate and property
+        zeta_water = data_wf[:, 1]
+        ux_water_1d_wf = data_wf[:, 3]
+        # Plot the data on the provided Axes
+        ax.plot(zeta_water, ux_water_1d_wf, color=cmap(norm(t)))
+
+
+def darken_color(color, factor=0.7):
+    """Oscurece un color dado en formato hexadecimal."""
+    r, g, b = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
+    r = int(r * factor)
+    g = int(g * factor)
+    b = int(b * factor)
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+def plot_data_water_color(ax, istep, time, direction, color, marker, custar_suffix):
+    for i, t in zip(istep, time):
+        formatted_i = f"{int(i):09d}"
+        filename_wf = f"wave_coord_{direction}_{custar_suffix}/prof_wf_{direction}_{custar_suffix}{formatted_i}.out"
+        if os.path.exists(filename_wf):
+            data_wf = np.loadtxt(filename_wf)
+            zeta_air = data_wf[:, 1]
+            ux_air_1d_wf = data_wf[:, 3]
+            label = f"{direction} custar {custar_suffix} at time {t}"
+            # Oscurece el color si es el último tiempo
+            if t == time[-1]:
+                color = darken_color(color)
+            ax.plot(
+                zeta_air,
+                ux_air_1d_wf,
+                color=color,
+                marker=marker,
+                markersize=7,
+                label=label,
+                linewidth=0.5,
+                alpha=0.5,
+            )
