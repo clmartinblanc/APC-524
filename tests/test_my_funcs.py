@@ -3,6 +3,7 @@ import os
 import sys
 import types
 
+
 # have my_funcs, was having issues getting python to find it
 current_directory = os.path.dirname(os.path.abspath(__file__))
 root = os.path.abspath(os.path.join(current_directory, ".."))
@@ -13,11 +14,11 @@ from my_funcs import *
 
 # verifying that all functions that should be defined are
 def test_func_existance():
-    assert isinstance(cart_to_wf, types.FunctionType)
+    assert isinstance(CoordinateConverter.cart_to_wf, types.FunctionType)
     assert isinstance(ene_flux_p, types.FunctionType)
     assert isinstance(ene_flux_v, types.FunctionType)
     assert isinstance(get_amp, types.FunctionType)
-    assert isinstance(interp_2d, types.FunctionType)
+    assert isinstance(CoordinateConverter.interp_2d, types.FunctionType)
     assert isinstance(load_bin, types.FunctionType)
     assert isinstance(mom_flux_p, types.FunctionType)
     assert isinstance(mom_flux_p_alt, types.FunctionType)
