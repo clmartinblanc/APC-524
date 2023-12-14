@@ -1,11 +1,16 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
 """
 Reorganizing the plotting stuff into a library of plotting tools that we can use throughout our scripts
 """
 
-import numpy as np
-import matplotlib.pyplot as plt
 
-def vec_field_example():
+def add1(x):
+    return x + 1
+
+
+def vec_field_example(show=False):
     # creating mesh
     x, y = np.meshgrid(np.linspace(-4, 4, 10), np.linspace(-4, 4, 10))
 
@@ -28,4 +33,6 @@ def vec_field_example():
     plt.ylabel("v")
 
     plt.grid()
-    plt.show()
+
+    if show:
+        plt.show()
