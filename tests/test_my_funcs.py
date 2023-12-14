@@ -26,7 +26,7 @@ def test_func_existance():
     assert isinstance(Utilities.mom_flux_v, types.FunctionType)
     assert isinstance(phase_partion, types.FunctionType)
     assert isinstance(CoordinateConverter.pol2cart, types.FunctionType)
-    assert isinstance(return_file, types.FunctionType)
+    assert isinstance(FileHandler.return_file, types.FunctionType)
     assert isinstance(SpectrumAnalyzer.spectrum_integration_2d, types.FunctionType)
     assert isinstance(SpectrumAnalyzer.spectrum_integration_3d, types.FunctionType)
     assert isinstance(extract_custar_from_dir, types.FunctionType)
