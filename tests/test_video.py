@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os
 import sys
+import pandas as pd
 from data_classes import data_classes
 
 # deleting all files from output folder used later in script to ensure that edge_detection appropiately writes new files every time
@@ -45,7 +46,20 @@ def test_edge_detection():
     assert os.path.exists("tests/output_of_video_test/Data_RunB.csv")
     assert os.path.exists("tests/output_of_video_test/Data_RunC.csv")
 
-    # verifying contents of outputs correct
+    # verifying contents of outputs correct: pandas
+    a_out = pd.read_csv("tests/output_of_video_test/Data_RunA.csv")
+    a_ex = pd.read_csv("tests/expected_output_of_vid_test/Data_RunA.csv")
+    assert a_out.equals(a_ex)
+
+    b_out = pd.read_csv("tests/output_of_video_test/Data_RunB.csv")
+    b_ex = pd.read_csv("tests/expected_output_of_vid_test/Data_RunB.csv")
+    assert b_out.equals(b_ex)
+
+    c_out = pd.read_csv("tests/output_of_video_test/Data_RunC.csv")
+    c_ex = pd.read_csv("tests/expected_output_of_vid_test/Data_RunC.csv")
+    assert c_out.equals(c_ex)
+
+    # verifying contents of outputs correct: .get_array() method
     expected_A = data_classes.TableData(
         "tests/expected_output_of_vid_test/Data_RunA.csv", ".csv"
     )
