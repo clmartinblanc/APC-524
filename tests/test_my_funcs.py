@@ -41,5 +41,5 @@ def test_func_existance():
     assert isinstance(plot_data_water_color, types.FunctionType)
     assert isinstance(process_data, types.FunctionType)
     assert isinstance(process_and_plot, types.FunctionType)
-    assert isinstance(spectrum_integration, types.FunctionType)
+    assert isinstance(SpectrumAnalyzer.spectrum_integration, types.FunctionType)
     assert isinstance(exponential_func, types.FunctionType)
