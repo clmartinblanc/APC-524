@@ -545,23 +545,23 @@ def process_directory(work_dir, L0, N, tot_row, k_, mu2):
         #
         eta_m0 = 1
         print("From cartesian to wf")
-        [ux_air_2d_wf, ux_air_1d_wf, zplot_air, zeta_air] = cart_to_wf(
+        [ux_air_2d_wf, ux_air_1d_wf, zplot_air, zeta_air] = CoordinateConverter.cart_to_wf(
             ux_2d_air, eta_1d, N, L0, k_, eta_m0
         )
         # ux_air
-        [ux_wat_2d_wf, ux_wat_1d_wf, zplot_wat, zeta_wat] = cart_to_wf(
+        [ux_wat_2d_wf, ux_wat_1d_wf, zplot_wat, zeta_wat] = CoordinateConverter.cart_to_wf(
             ux_2d_wat, eta_1d, N, L0, k_, eta_m0
         )
         # ux_wat
-        [pr_air_2d_wf, pr_air_1d_wf, zplot_air, zeta_air] = cart_to_wf(
+        [pr_air_2d_wf, pr_air_1d_wf, zplot_air, zeta_air] = CoordinateConverter.cart_to_wf(
             pr_2d_air, eta_1d, N, L0, k_, eta_m0
         )
         # pr_air (we do not need the one in water)
-        [di_air_2d_wf, di_air_1d_wf, zplot_air, zeta_air] = cart_to_wf(
+        [di_air_2d_wf, di_air_1d_wf, zplot_air, zeta_air] = CoordinateConverter.cart_to_wf(
             di_2d_air, eta_1d, N, L0, k_, eta_m0
         )
         # di_air
-        [di_wat_2d_wf, di_wat_1d_wf, zplot_wat, zeta_wat] = cart_to_wf(
+        [di_wat_2d_wf, di_wat_1d_wf, zplot_wat, zeta_wat] = CoordinateConverter.cart_to_wf(
             di_2d_wat, eta_1d, N, L0, k_, eta_m0
         )
         # di_wat
