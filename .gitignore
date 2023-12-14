@@ -74,6 +74,7 @@ ENV/
 env.bak/
 venv.bak/
 fin_proj_venv
+clara_venv
 
 # Spyder project settings
 .spyderproject
