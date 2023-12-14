@@ -40,7 +40,38 @@ def test_edge_detection():
     # this adds about 10 seconds of testing time, FYI
     video_data_instance.run_script_n(edge_detection)
 
-    # checking that edge_detection wrote expected output files
+    # checking that edge_detection wrote output files in correct location with correct name
     assert os.path.exists("tests/output_of_video_test/Data_RunA.csv")
     assert os.path.exists("tests/output_of_video_test/Data_RunB.csv")
     assert os.path.exists("tests/output_of_video_test/Data_RunC.csv")
+
+    # verifying contents of outputs correct
+    expected_A = data_classes.TableData(
+        "tests/expected_output_of_vid_test/Data_RunA.csv", ".csv"
+    )
+    expected_A_array = expected_A.get_array()
+    expected_B = data_classes.TableData(
+        "tests/expected_output_of_vid_test/Data_RunB.csv", ".csv"
+    )
+    expected_B_array = expected_B.get_array()
+    expected_C = data_classes.TableData(
+        "tests/expected_output_of_vid_test/Data_RunC.csv", ".csv"
+    )
+    expected_C_array = expected_C.get_array()
+
+    outputted_A = data_classes.TableData(
+        "tests/output_of_video_test/Data_RunA.csv", ".csv"
+    )
+    outputted_A_array = outputted_A.get_array()
+    outputted_B = data_classes.TableData(
+        "tests/output_of_video_test/Data_RunB.csv", ".csv"
+    )
+    outputted_B_array = outputted_B.get_array()
+    outputted_C = data_classes.TableData(
+        "tests/output_of_video_test/Data_RunC.csv", ".csv"
+    )
+    outputted_C_array = outputted_C.get_array()
+
+    assert expected_A_array == outputted_A_array
+    assert expected_B_array == outputted_B_array
+    assert expected_C_array == outputted_C_array

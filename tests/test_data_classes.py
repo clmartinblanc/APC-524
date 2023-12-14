@@ -10,7 +10,7 @@ def test_add2():
 # testing appropriate functionality of TableData class
 def test_TableData_instance():
     # verifying it can correctly access and convert table data
-    test_instance = data_classes.TableData("scripts/data_classes/test_data.txt", ".txt")
+    test_instance = data_classes.TableData("scripts/data_classes/test_data.csv", ".csv")
     assert test_instance.get_array() == [
         ["x", "y", "z"],
         [8.6, 5.6, 1.0],

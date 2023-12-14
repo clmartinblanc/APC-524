@@ -85,6 +85,9 @@ class TableData(data):
         lines = readed.split("\n")
         data = [line.split(",") for line in lines]
 
+        # remove empty last row
+        if data[len(data) - 1] == [""]:
+            data = data[1 : len(data) - 2]
         # convert string numbers to float
         for i in range(1, len(data)):
             data[i] = [float(x) for x in data[i]]
