@@ -2,11 +2,6 @@ from __future__ import annotations
 from data_classes import data_classes
 
 
-# making sure that I can access functions in this folder
-def test_add2():
-    assert 4 == data_classes.add2(2)
-
-
 # testing appropriate functionality of TableData class
 def test_TableData_instance():
     # verifying it can correctly access and convert table data
