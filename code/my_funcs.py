@@ -947,7 +947,7 @@ class DataPlotter:
 
         df = self.process_data(work_dir)
 
-        # Filtrar tiempos para reducir la superposición
+        # Filter times to reduce overlap
         unique_times = df["t"].unique()
         sampled_times = unique_times[::5]
 
