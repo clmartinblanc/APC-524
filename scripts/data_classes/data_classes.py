@@ -4,7 +4,7 @@ from os.path import splitext
 import numpy as np
 
 
-class data(abc.ABC):
+class Data(abc.ABC):
     @abc.abstractmethod
     def __init__(self, data_path, extension):
         self.data_path = data_path
@@ -15,7 +15,7 @@ class data(abc.ABC):
         pass
 
 
-class VideoData(data):
+class VideoData(Data):
     def __init__(self, data_path, save_path, extension):
         VideoData.data_path = data_path
         VideoData.save_path = save_path
@@ -68,7 +68,7 @@ class VideoData(data):
         script(self)
 
 
-class TableData(data):
+class TableData(Data):
     def __init__(self, data_path, extension):
         TableData.data_path = data_path
         TableData.extension = extension
