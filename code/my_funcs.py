@@ -53,7 +53,7 @@ class CoordinateConverter:
         p is 2d (in the x, z), eta is 1d (only x)
         """
         eta_1d = eta_1d
-        # the mean has been already subtracted
+        # the mean has been aly subtracted
         p_2d_interp = np.zeros([N, N])
         zplot = np.zeros(
             [N, N]
@@ -110,7 +110,7 @@ class SpectrumAnalyzer:
         varr = np.var(eta)
         if CHECK:
             print("var", varr)
-        variance.append(varr)
+        self.variance.append(varr)
         print("mean", np.mean(eta))
 
         # Definitions for spectral analysis
@@ -420,16 +420,134 @@ class DataProcessor:
         match = re.search(r"(forward|backward)", self.work_dir)
         return match.group(1) if match else "Unknown"
 
+
+    def read_files_to_dfs(direction, custar_suffix):
+        """
+        Reads data from specified files and transforms it into Pandas DataFrames.
+
+        This function reads two types of files: 'glo_obs_post__' and 'glo_obs_post_alt__',
+        both of which are expected to have a specific suffix and direction in their filenames.
+        The data from these files is loaded into numpy arrays and then converted into Pandas DataFrames.
+        Each DataFrame is structured with specific columns based on the file content.
+
+        Parameters:
+        - direction (str): A string parameter that specifies the direction of the wind (forward or backward).
+        - custar_suffix (str): A string parameter that defines the custom c/u* (2,4 or 8).
+
+        Returns:
+        - df_glo_obs (DataFrame): A DataFrame containing data from the 'glo_obs_post__' file.
+        Columns include 'istep', 'time', 'ak', 'mf_px', 'mf_py', 'mf_pz', 'en_p', 'en_v'.
+        The 'time' column is adjusted to start from 0.
+        - df_glo_obs_alt (DataFrame): A DataFrame containing data from the 'glo_obs_post_alt__' file.
+        Columns include 'istep', 'time', 'mf_px_alt', 'mf_vx_alt'.
+        Similar to df_glo_obs, the 'time' column in this DataFrame is also adjusted to start from 0, it doesn't start in 0 directly because we use a precursor for the turbulence
+
+        """
+
+        # Reading the glo_obs file
+        filename_glo = f"glo_obs_post__{direction}_{custar_suffix}.out"
+        data_glo_obs = np.loadtxt(filename_glo)
+        df_glo_obs = pd.DataFrame(
+            data_glo_obs,
+            columns=["istep", "time", "ak", "mf_px", "mf_py", "mf_pz", "en_p", "en_v"],
+        )
+
+        # Adjust the 'time' column to start from 0
+        df_glo_obs["time"] = df_glo_obs["time"] - df_glo_obs["time"].iloc[0]
+
+        # Reading the glo_obs_alt file
+        filename_glo_alt = f"glo_obs_post_alt__{direction}_{custar_suffix}.out"
+        data_glo_obs_alt = np.loadtxt(filename_glo_alt)
+        df_glo_obs_alt = pd.DataFrame(
+            data_glo_obs_alt, columns=["istep", "time", "mf_px_alt", "mf_vx_alt"]
+        )
+
+        # Adjust the 'time' column in the alt DataFrame to start from 0
+        df_glo_obs_alt["time"] = df_glo_obs_alt["time"] - df_glo_obs_alt["time"].iloc[0]
+
+        return df_glo_obs, df_glo_obs_alt
+
+
+    def process_data(self):
+        N = 512
+        L0 = 2 * np.pi
+
+        # Leer el archivo de texto
+        data = np.loadtxt(os.path.join(self.work_dir, "eta/global_int.out"))
+        istep_c, time = data[:, 1], data[:, 0]
+
+        eta_series = np.zeros((istep_c.shape[0], self.N, self.N), dtype=np.float32)
+
+        for j, i in enumerate(istep_c):
+            etalo = np.fromfile(
+                os.path.join(self.work_dir, f"eta/eta_loc/eta_loc_t0000{int(i)}.bin")
+            )
+            etalo = etalo.reshape([int(etalo.size / 18), 18])
+
+            etal = [row for row in etalo if abs(row[12] - 1.0) < 0.20]
+            etal = np.array(etal)
+
+            xarray = np.linspace(-L0 / 2, L0 / 2, N, endpoint=False) + L0 / (2 * N)
+            yarray = xarray  # Son iguales en este contexto
+            xtile, ytile = np.meshgrid(xarray, yarray)
+            eta = griddata(
+                (etal[:, 0].ravel(), etal[:, 1].ravel()),
+                etal[:, 12].ravel(),
+                (xtile, ytile),
+                method="nearest",
+            )
+
+            eta_series[j] = eta
+
+        patterns = [
+            "ux_2d_avg_{:09d}.bin",
+            "uy_2d_avg_{:09d}.bin",
+            "uz_2d_avg_{:09d}.bin",
+            "fv_2d_avg_{:09d}.bin",
+            "pr_2d_avg_{:09d}.bin",
+        ]
+        data_list = []
+
+        for i_int, t in zip(istep_c, time):
+            data_dict = {"i": i_int, "t": t}
+
+            for idx, pattern in enumerate(patterns):
+                filename = pattern.format(int(i_int))
+                file_path = os.path.join(self.work_dir + "field/", filename)
+
+                if os.path.exists(file_path):
+                    array_data = np.fromfile(file_path)
+                    reshaped_data = array_data.reshape((N, N))
+
+                    if idx == 0:
+                        data_dict["ux"] = reshaped_data
+                        data_dict["ux_mean"] = np.average(reshaped_data, axis=0)
+                    elif idx == 1:
+                        data_dict["uy"] = reshaped_data
+                        data_dict["uy_mean"] = np.average(reshaped_data, axis=0)
+                    elif idx == 2:
+                        data_dict["uz"] = reshaped_data
+                        data_dict["uz_mean"] = np.average(reshaped_data, axis=0)
+                    elif idx == 3:
+                        data_dict["fv"] = reshaped_data
+                    elif idx == 4:
+                        data_dict["pressure"] = reshaped_data
+
+            data_list.append(data_dict)
+
+        return pd.DataFrame(data_list)
+
+
     def process_directory(self):
-        custar_suffix = self.extract_custar_from_dir(work_dir)
+        custar_suffix = self.extract_custar_from_dir(self.work_dir)
         # custar_suffix = os.path.basename(os.path.normpath(work_dir)).split("custar")[1]
         # direction = os.path.basename(os.path.normpath(work_dir)) # 'forward' o 'backward'
-        direction = self.extract_direction_from_dir(work_dir)
+        direction = self.extract_direction_from_dir(self.work_dir)
 
-        time_fld = pd.read_csv(work_dir + "field/log_field.out", header=None, sep=" ")
+        time_fld = pd.read_csv(self.work_dir + "field/log_field.out", header=None, sep=" ")
         time_fld = time_fld.to_numpy()
 
-        time_eta = pd.read_csv(work_dir + "eta/global_int.out", header=None, sep=" ")
+        time_eta = pd.read_csv(self.work_dir + "eta/global_int.out", header=None, sep=" ")
         time_eta = time_eta.to_numpy()
 
         x_int = np.linspace(-self.L0 / 2, self.L0 / 2, self.N, endpoint=False) + self.L0 / self.N / 2
@@ -449,11 +567,11 @@ class DataProcessor:
             #
             # load eta_loc
             #
-            etalo = np.fromfile(work_dir + "eta/eta_loc/eta_loc_t" + istep_c + ".bin")
+            etalo = np.fromfile(self.work_dir + "eta/eta_loc/eta_loc_t" + istep_c + ".bin")
             size = etalo.shape
-            tot_row_i = int(size[0] / tot_row)
+            tot_row_i = int(size[0] / self.tot_row)
             print(tot_row_i)
-            etalo = etalo.reshape([tot_row_i, tot_row])
+            etalo = etalo.reshape([tot_row_i, self.tot_row])
             #
             # we remove bubbles for interpolate interface
             #
@@ -580,35 +698,35 @@ class DataProcessor:
                 ux_air_1d_wf,
                 zplot_air,
                 zeta_air,
-            ] = CoordinateConverter.cart_to_wf(ux_2d_air, eta_1d, N, L0, k_, eta_m0)
+            ] = CoordinateConverter.cart_to_wf(ux_2d_air, eta_1d, self.N, self.L0, self.k_, eta_m0)
             # ux_air
             [
                 ux_wat_2d_wf,
                 ux_wat_1d_wf,
                 zplot_wat,
                 zeta_wat,
-            ] = CoordinateConverter.cart_to_wf(ux_2d_wat, eta_1d, N, L0, k_, eta_m0)
+            ] = CoordinateConverter.cart_to_wf(ux_2d_wat, eta_1d, self.N, self.L0, self.k_, eta_m0)
             # ux_wat
             [
                 pr_air_2d_wf,
                 pr_air_1d_wf,
                 zplot_air,
                 zeta_air,
-            ] = CoordinateConverter.cart_to_wf(pr_2d_air, eta_1d, N, L0, k_, eta_m0)
+            ] = CoordinateConverter.cart_to_wf(pr_2d_air, eta_1d, self.N, self.L0, self.k_, eta_m0)
             # pr_air (we do not need the one in water)
             [
                 di_air_2d_wf,
                 di_air_1d_wf,
                 zplot_air,
                 zeta_air,
-            ] = CoordinateConverter.cart_to_wf(di_2d_air, eta_1d, N, L0, k_, eta_m0)
+            ] = CoordinateConverter.cart_to_wf(di_2d_air, eta_1d,self.N, self.L0, self.k_, eta_m0)
             # di_air
             [
                 di_wat_2d_wf,
                 di_wat_1d_wf,
                 zplot_wat,
                 zeta_wat,
-            ] = CoordinateConverter.cart_to_wf(di_2d_wat, eta_1d, N, L0, k_, eta_m0)
+            ] = CoordinateConverter.cart_to_wf(di_2d_wat, eta_1d,self.N, self.L0, self.k_, eta_m0)
             # di_wat
             #
 
@@ -674,52 +792,6 @@ class DataProcessor:
 
 # for Graphs.ipynb
 
-
-def read_files_to_dfs(direction, custar_suffix):
-    """
-    Reads data from specified files and transforms it into Pandas DataFrames.
-
-    This function reads two types of files: 'glo_obs_post__' and 'glo_obs_post_alt__',
-    both of which are expected to have a specific suffix and direction in their filenames.
-    The data from these files is loaded into numpy arrays and then converted into Pandas DataFrames.
-    Each DataFrame is structured with specific columns based on the file content.
-
-    Parameters:
-    - direction (str): A string parameter that specifies the direction of the wind (forward or backward).
-    - custar_suffix (str): A string parameter that defines the custom c/u* (2,4 or 8).
-
-    Returns:
-    - df_glo_obs (DataFrame): A DataFrame containing data from the 'glo_obs_post__' file.
-      Columns include 'istep', 'time', 'ak', 'mf_px', 'mf_py', 'mf_pz', 'en_p', 'en_v'.
-      The 'time' column is adjusted to start from 0.
-    - df_glo_obs_alt (DataFrame): A DataFrame containing data from the 'glo_obs_post_alt__' file.
-      Columns include 'istep', 'time', 'mf_px_alt', 'mf_vx_alt'.
-      Similar to df_glo_obs, the 'time' column in this DataFrame is also adjusted to start from 0, it doesn't start in 0 directly because we use a precursor for the turbulence
-
-    """
-
-    # Reading the glo_obs file
-    filename_glo = f"glo_obs_post__{direction}_{custar_suffix}.out"
-    data_glo_obs = np.loadtxt(filename_glo)
-    df_glo_obs = pd.DataFrame(
-        data_glo_obs,
-        columns=["istep", "time", "ak", "mf_px", "mf_py", "mf_pz", "en_p", "en_v"],
-    )
-
-    # Adjust the 'time' column to start from 0
-    df_glo_obs["time"] = df_glo_obs["time"] - df_glo_obs["time"].iloc[0]
-
-    # Reading the glo_obs_alt file
-    filename_glo_alt = f"glo_obs_post_alt__{direction}_{custar_suffix}.out"
-    data_glo_obs_alt = np.loadtxt(filename_glo_alt)
-    df_glo_obs_alt = pd.DataFrame(
-        data_glo_obs_alt, columns=["istep", "time", "mf_px_alt", "mf_vx_alt"]
-    )
-
-    # Adjust the 'time' column in the alt DataFrame to start from 0
-    df_glo_obs_alt["time"] = df_glo_obs_alt["time"] - df_glo_obs_alt["time"].iloc[0]
-
-    return df_glo_obs, df_glo_obs_alt
 
 
 import matplotlib.pyplot as plt
@@ -872,178 +944,78 @@ class DataPlotter:
                 )
 
 
-# Function to plot water data on a specific axis
-def plot_water_data(ax, istep, time, direction, cmap, norm, suffix):
-    for i, t in zip(istep, time):
-        formatted_i = f"{int(i):09d}"  # Format the timestep for file naming
-        # Constructing the filename based on direction and suffix
-        filename_wf = f"wave_coord_{direction}_{suffix}/prof_wf_{direction}_{suffix}{formatted_i}.out"
-        # Load the data from the file
-        data_wf = np.loadtxt(filename_wf)
-        # Extracting water spatial coordinate and property
-        zeta_water = data_wf[:, 1]
-        ux_water_1d_wf = data_wf[:, 3]
-        # Plot the data on the provided Axes
-        ax.plot(zeta_water, ux_water_1d_wf, color=cmap(norm(t)))
-
-def process_and_plot(work_dir, ax, cmap_name):
-    custar_value = extract_custar_from_dir(work_dir)
-    ax.set_title(f"c/ustar = {custar_value}")
-
-    df = process_data(work_dir)
-
-    # Filtrar tiempos para reducir la superposición
-    unique_times = df["t"].unique()
-    sampled_times = unique_times[::5]
-
-    cmap = plt.get_cmap(cmap_name, len(sampled_times))
-
-    for idx, time in enumerate(sampled_times):
-        df_time = df[df["t"] == time]
-        ux_means = df_time["ux_mean"].values[0]
-        ax.plot(y, ux_means / ustar, color=cmap(idx), lw=1.0, linestyle="-")
-
-    cbar = plt.colorbar(
-        plt.cm.ScalarMappable(cmap=cmap),
-        ax=ax,
-        orientation="vertical",
-        fraction=0.05,
-        pad=0.05,
-    )
-    cbar.set_label("Time", size=12)
-
-    cbar.set_ticks(np.linspace(0, 1, len(sampled_times)))
-    cbar.set_ticklabels([f"{time:.2f}" for time in sampled_times])
-
-
-
-
-'''
-def plot_data_water_color(ax, istep, time, direction, color, marker, custar_suffix):
-    for i, t in zip(istep, time):
-        formatted_i = f"{int(i):09d}"
-        filename_wf = f"wave_coord_{direction}_{custar_suffix}/prof_wf_{direction}_{custar_suffix}{formatted_i}.out"
-        if os.path.exists(filename_wf):
+    # Function to plot water data on a specific axis
+    def plot_water_data(ax, istep, time, direction, cmap, norm, suffix):
+        for i, t in zip(istep, time):
+            formatted_i = f"{int(i):09d}"  # Format the timestep for file naming
+            # Constructing the filename based on direction and suffix
+            filename_wf = f"wave_coord_{direction}_{suffix}/prof_wf_{direction}_{suffix}{formatted_i}.out"
+            # Load the data from the file
             data_wf = np.loadtxt(filename_wf)
-            zeta_air = data_wf[:, 1]
-            ux_air_1d_wf = data_wf[:, 3]
-            label = f"{direction} custar {custar_suffix} at time {t}"
-            # Oscurece el color si es el último tiempo
-            if t == time[-1]:
-                color = darken_color(color)
-            ax.plot(
-                zeta_air,
-                ux_air_1d_wf,
-                color=color,
-                marker=marker,
-                markersize=7,
-                label=label,
-                linewidth=0.5,
-                alpha=0.5,
-            )
-'''
+            # Extracting water spatial coordinate and property
+            zeta_water = data_wf[:, 1]
+            ux_water_1d_wf = data_wf[:, 3]
+            # Plot the data on the provided Axes
+            ax.plot(zeta_water, ux_water_1d_wf, color=cmap(norm(t)))
+
+    def process_and_plot(work_dir, ax, cmap_name):
+        custar_value = extract_custar_from_dir(work_dir)
+        ax.set_title(f"c/ustar = {custar_value}")
+
+        df = self.process_data(work_dir)
+
+        # Filtrar tiempos para reducir la superposición
+        unique_times = df["t"].unique()
+        sampled_times = unique_times[::5]
+
+        cmap = plt.get_cmap(cmap_name, len(sampled_times))
+
+        for idx, time in enumerate(sampled_times):
+            df_time = df[df["t"] == time]
+            ux_means = df_time["ux_mean"].values[0]
+            ax.plot(y, ux_means / ustar, color=cmap(idx), lw=1.0, linestyle="-")
+
+        cbar = plt.colorbar(
+            plt.cm.ScalarMappable(cmap=cmap),
+            ax=ax,
+            orientation="vertical",
+            fraction=0.05,
+            pad=0.05,
+        )
+        cbar.set_label("Time", size=12)
+
+        cbar.set_ticks(np.linspace(0, 1, len(sampled_times)))
+        cbar.set_ticklabels([f"{time:.2f}" for time in sampled_times])
+
+
+
+
+    '''
+    def plot_data_water_color(ax, istep, time, direction, color, marker, custar_suffix):
+        for i, t in zip(istep, time):
+            formatted_i = f"{int(i):09d}"
+            filename_wf = f"wave_coord_{direction}_{custar_suffix}/prof_wf_{direction}_{custar_suffix}{formatted_i}.out"
+            if os.path.exists(filename_wf):
+                data_wf = np.loadtxt(filename_wf)
+                zeta_air = data_wf[:, 1]
+                ux_air_1d_wf = data_wf[:, 3]
+                label = f"{direction} custar {custar_suffix} at time {t}"
+                # Oscurece el color si es el último tiempo
+                if t == time[-1]:
+                    color = darken_color(color)
+                ax.plot(
+                    zeta_air,
+                    ux_air_1d_wf,
+                    color=color,
+                    marker=marker,
+                    markersize=7,
+                    label=label,
+                    linewidth=0.5,
+                    alpha=0.5,
+                )
+    '''
 
 # for postprocessing.ipynb
-
-def process_data(work_dir):
-    N = 512
-    L0 = 2 * np.pi
-
-    # Leer el archivo de texto
-    data = np.loadtxt(os.path.join(work_dir, "eta/global_int.out"))
-    istep_c, time = data[:, 1], data[:, 0]
-
-    eta_series = np.zeros((istep_c.shape[0], N, N), dtype=np.float32)
-
-    for j, i in enumerate(istep_c):
-        etalo = np.fromfile(
-            os.path.join(work_dir, f"eta/eta_loc/eta_loc_t0000{int(i)}.bin")
-        )
-        etalo = etalo.reshape([int(etalo.size / 18), 18])
-
-        etal = [row for row in etalo if abs(row[12] - 1.0) < 0.20]
-        etal = np.array(etal)
-
-        xarray = np.linspace(-L0 / 2, L0 / 2, N, endpoint=False) + L0 / (2 * N)
-        yarray = xarray  # Son iguales en este contexto
-        xtile, ytile = np.meshgrid(xarray, yarray)
-        eta = griddata(
-            (etal[:, 0].ravel(), etal[:, 1].ravel()),
-            etal[:, 12].ravel(),
-            (xtile, ytile),
-            method="nearest",
-        )
-
-        eta_series[j] = eta
-
-    patterns = [
-        "ux_2d_avg_{:09d}.bin",
-        "uy_2d_avg_{:09d}.bin",
-        "uz_2d_avg_{:09d}.bin",
-        "fv_2d_avg_{:09d}.bin",
-        "pr_2d_avg_{:09d}.bin",
-    ]
-    data_list = []
-
-    for i_int, t in zip(istep_c, time):
-        data_dict = {"i": i_int, "t": t}
-
-        for idx, pattern in enumerate(patterns):
-            filename = pattern.format(int(i_int))
-            file_path = os.path.join(work_dir + "field/", filename)
-
-            if os.path.exists(file_path):
-                array_data = np.fromfile(file_path)
-                reshaped_data = array_data.reshape((N, N))
-
-                if idx == 0:
-                    data_dict["ux"] = reshaped_data
-                    data_dict["ux_mean"] = np.average(reshaped_data, axis=0)
-                elif idx == 1:
-                    data_dict["uy"] = reshaped_data
-                    data_dict["uy_mean"] = np.average(reshaped_data, axis=0)
-                elif idx == 2:
-                    data_dict["uz"] = reshaped_data
-                    data_dict["uz_mean"] = np.average(reshaped_data, axis=0)
-                elif idx == 3:
-                    data_dict["fv"] = reshaped_data
-                elif idx == 4:
-                    data_dict["pressure"] = reshaped_data
-
-        data_list.append(data_dict)
-
-    return pd.DataFrame(data_list)
-
-
-def process_and_plot(work_dir, ax, cmap_name):
-    custar_value = extract_custar_from_dir(work_dir)
-    ax.set_title(f"c/ustar = {custar_value}")
-
-    df = process_data(work_dir)
-
-    # Filtrar tiempos para reducir la superposición
-    unique_times = df["t"].unique()
-    sampled_times = unique_times[::5]
-
-    cmap = plt.get_cmap(cmap_name, len(sampled_times))
-
-    for idx, time in enumerate(sampled_times):
-        df_time = df[df["t"] == time]
-        ux_means = df_time["ux_mean"].values[0]
-        ax.plot(y, ux_means / ustar, color=cmap(idx), lw=1.0, linestyle="-")
-
-    cbar = plt.colorbar(
-        plt.cm.ScalarMappable(cmap=cmap),
-        ax=ax,
-        orientation="vertical",
-        fraction=0.05,
-        pad=0.05,
-    )
-    cbar.set_label("Time", size=12)
-
-    cbar.set_ticks(np.linspace(0, 1, len(sampled_times)))
-    cbar.set_ticklabels([f"{time:.2f}" for time in sampled_times])
-
 
 '''
 def cart_to_wf(p_2d, eta_1d, N, L0, k_, eta_m0):
