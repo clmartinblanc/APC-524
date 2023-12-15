@@ -18,8 +18,7 @@ This repo contains two examples, applying the the class structure to video and b
 
 ### Video Data
  The demo of analyzing video data is found in `scripts/video_demo/video_demo.ipynb`. The dataset consists of a toy problem of tracking the center of a bouncing ball. `scripts/video_demo/demo` contains data from three trials in the form of serialized images. `scripts/video_demo/video_scripts` contains `edge_detection.py`, which uses open-cv to output the coordinates and radius of the circle for each frame to a .csv file stored in `scripts/video_demo/output`. It also contains `video_plot.py` which plots the x and y coordinates vs time for all data.
-### Video Data
- The demo of analyzing video data is found in `scripts/video_demo/video_demo.ipynb`. The dataset consists of a toy problem of tracking the center of a bouncing ball. `scripts/video_demo/demo` contains data from three trials in the form of serialized images. `scripts/video_demo/video_scripts` contains `edge_detection.py`, which uses open-cv to output the coordinates and radius of the circle for each frame to a .csv file stored in `scripts/video_demo/output`. It also contains `video_plot.py` which plots the x and y coordinates vs time for all data.
+
 
 ### Binary Data
 #### Postprocessing
