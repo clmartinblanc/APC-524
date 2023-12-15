@@ -66,7 +66,10 @@ class CoordinateConverter:
 
 
 class SpectrumAnalyzer:
-    def __init__(self):
+    def __init__(self, L0, T, time):
+        self.L0 = L0
+        self.T = T
+        self.time = time
         self.variance = []
         self.integral = []
         self.polar_integral = []
@@ -232,7 +235,17 @@ class SpectrumAnalyzer:
                 np.sum(F_ktheta * k_tile, axis=0) * dtheta
             )  #  integral in theta for each freq i so : F(k,theta) ---> F(k) for each omega ---> acces to F(k,omega)
 
-        return F_xy, F_xyomega, F_ktheta, F_kthetaomega, F_komega
+        return (
+            F_xy,
+            F_xyomega,
+            F_ktheta,
+            F_kthetaomega,
+            F_komega,
+            k_tile,
+            theta_tile,
+            kx_tile,
+            ky_tile,
+        )
 
     def spectrum_integration(self, data, N, L, dimension="2D", CHECK=False):
         if dimension == "2D":
