@@ -11,7 +11,6 @@ video_scripts_path = os.path.join(root, "code")
 sys.path.append(video_scripts_path)
 from my_funcs import *
 
-
 # verifying that all functions that should be defined are
 def test_func_existance():
     assert isinstance(CoordinateConverter.cart_to_wf, types.FunctionType)

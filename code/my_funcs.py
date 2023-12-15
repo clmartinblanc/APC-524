@@ -34,6 +34,7 @@ class CoordinateConverter:
         x = rho * np.cos(phi)
         y = rho * np.sin(phi)
         return x, y
+
     @staticmethod
     def cart_to_wf(p_2d, eta_1d, N, L0, k_, eta_m0):
         """
@@ -57,9 +58,13 @@ class CoordinateConverter:
             # average along the x direction
         #
         return p_2d_interp, p_1d_interp, zplot, zeta
+
     def interp_2d(xdata, zdata, xtile, ztile, fld):
         fld_int = griddata(
-            (xdata.ravel(), zdata.ravel()), fld.ravel(), (xtile, ztile), method="nearest"
+            (xdata.ravel(), zdata.ravel()),
+            fld.ravel(),
+            (xtile, ztile),
+            method="nearest",
         )
         return fld_int
 
@@ -169,11 +174,10 @@ class SpectrumAnalyzer:
     def spectrum_integration_3d(self, data, L0, N, T, time):
         dt = time[1] - time[0]  # sampling intervals, (s)
         T = time[-1] - time[0]  # total duration
-        Nt = data.shape[0] 
+        Nt = data.shape[0]
 
         dx = L0 / N  # spatial sampling step along X in (m)
         dy = L0 / N  # spatial sampling step along Y in (m)
-
 
         t_max = dt * data.shape[0]  # s
         x_max = dx * data.shape[1]  # m
@@ -251,7 +255,6 @@ def phase_partion(ux, uy, f, s1_exp, s2_exp):
     uy_air = uy * (1.0 - f) ** s1_exp
     uy_water = uy * f ** (1 / s2_exp)
     return ux_air, ux_water, uy_air, uy_water
-
 
 
 class FileHandler:
@@ -373,15 +376,26 @@ class Utilities:
         return ak
 
 
-
 def exponential_func(x, a, b):
     return a * np.exp(b * x)
 
 
 # for Save_data.ipynb
 
+
 class DataProcessor:
-    def __init__(self, work_dir, L0=2*np.pi, N=512, tot_row=18, k_=4, u_s=0.25, rho_r=1000 / 1.225, Re_tau=720, h=1):
+    def __init__(
+        self,
+        work_dir,
+        L0=2 * np.pi,
+        N=512,
+        tot_row=18,
+        k_=4,
+        u_s=0.25,
+        rho_r=1000 / 1.225,
+        Re_tau=720,
+        h=1,
+    ):
         self.work_dir = work_dir
         self.L0 = L0
         self.N = N
@@ -393,8 +407,7 @@ class DataProcessor:
         self.h = h
         self.rho1 = 1
         self.rho2 = self.rho1 / self.rho_r
-        self.mu2 = self.rho2 * self.u_s * (self.L0 - self.h) / self.Re_tau  
-
+        self.mu2 = self.rho2 * self.u_s * (self.L0 - self.h) / self.Re_tau
 
     def extract_custar_from_dir(self):
         """
@@ -410,7 +423,6 @@ class DataProcessor:
         """
         match = re.search(r"(forward|backward)", self.work_dir)
         return match.group(1) if match else "Unknown"
-
 
     def read_files_to_dfs(direction, custar_suffix):
         """
@@ -458,7 +470,6 @@ class DataProcessor:
 
         return df_glo_obs, df_glo_obs_alt
 
-
     def process_data(self):
         # Leer el archivo de texto
         data = np.loadtxt(os.path.join(self.work_dir, "eta/global_int.out"))
@@ -475,7 +486,9 @@ class DataProcessor:
             etal = [row for row in etalo if abs(row[12] - 1.0) < 0.20]
             etal = np.array(etal)
 
-            xarray = np.linspace(-self.L0 / 2, self.L0 / 2, N, endpoint=False) + self.L0 / (2 * self.N)
+            xarray = np.linspace(
+                -self.L0 / 2, self.L0 / 2, N, endpoint=False
+            ) + self.L0 / (2 * self.N)
             yarray = xarray  # Son iguales en este contexto
             xtile, ytile = np.meshgrid(xarray, yarray)
             eta = griddata(
@@ -525,21 +538,30 @@ class DataProcessor:
 
         return pd.DataFrame(data_list)
 
-
     def process_directory(self):
         custar_suffix = self.extract_custar_from_dir(self.work_dir)
         # custar_suffix = os.path.basename(os.path.normpath(work_dir)).split("custar")[1]
         # direction = os.path.basename(os.path.normpath(work_dir)) # 'forward' o 'backward'
         direction = self.extract_direction_from_dir(self.work_dir)
 
-        time_fld = pd.read_csv(self.work_dir + "field/log_field.out", header=None, sep=" ")
+        time_fld = pd.read_csv(
+            self.work_dir + "field/log_field.out", header=None, sep=" "
+        )
         time_fld = time_fld.to_numpy()
 
-        time_eta = pd.read_csv(self.work_dir + "eta/global_int.out", header=None, sep=" ")
+        time_eta = pd.read_csv(
+            self.work_dir + "eta/global_int.out", header=None, sep=" "
+        )
         time_eta = time_eta.to_numpy()
 
-        x_int = np.linspace(-self.L0 / 2, self.L0 / 2, self.N, endpoint=False) + self.L0 / self.N / 2
-        z_int = np.linspace(-self.L0 / 2, self.L0 / 2, self.N, endpoint=False) + self.L0 / self.N / 2
+        x_int = (
+            np.linspace(-self.L0 / 2, self.L0 / 2, self.N, endpoint=False)
+            + self.L0 / self.N / 2
+        )
+        z_int = (
+            np.linspace(-self.L0 / 2, self.L0 / 2, self.N, endpoint=False)
+            + self.L0 / self.N / 2
+        )
         x_til, z_til = np.meshgrid(x_int, z_int)
 
         for i in range(len(time_fld)):
@@ -555,7 +577,9 @@ class DataProcessor:
             #
             # load eta_loc
             #
-            etalo = np.fromfile(self.work_dir + "eta/eta_loc/eta_loc_t" + istep_c + ".bin")
+            etalo = np.fromfile(
+                self.work_dir + "eta/eta_loc/eta_loc_t" + istep_c + ".bin"
+            )
             size = etalo.shape
             tot_row_i = int(size[0] / self.tot_row)
             print(tot_row_i)
@@ -576,7 +600,7 @@ class DataProcessor:
             for i in range(new_row):
                 if abs(etalo[i][12] - eta_m0) < cirp_th:
                     etal[i][:] = etalo[i][:]
-            
+
             print("Assign array")
             xpo = etal[:, 0]
             zpo = etal[:, 1]
@@ -618,7 +642,9 @@ class DataProcessor:
             # compute momentum and energy fluxes
             #
             print("Compute momentum flux - pressure")
-            [mf_px, mf_py, mf_pz] = Utilities.mom_flux_p(pre_int, n_x_int, n_y_int, n_z_int)
+            [mf_px, mf_py, mf_pz] = Utilities.mom_flux_p(
+                pre_int, n_x_int, n_y_int, n_z_int
+            )
             print("Compute momentum flux - viscous dissipation")
             [mf_vx, mf_vy, mf_vz] = Utilities.mom_flux_v(
                 Sxx_int,
@@ -633,7 +659,9 @@ class DataProcessor:
                 mu2,
             )
             print("Energy flux - pressure")
-            en_p = Utilities.ene_flux_p(pre_int, uxi_int, uyi_int, uzi_int, n_x_int, n_y_int, n_z_int)
+            en_p = Utilities.ene_flux_p(
+                pre_int, uxi_int, uyi_int, uzi_int, n_x_int, n_y_int, n_z_int
+            )
             print("Energy flux - viscous dissipation")
             en_v = Utilities.ene_flux_v(
                 Sxx_int,
@@ -658,7 +686,9 @@ class DataProcessor:
             Sxx_1d = np.average(Sxx_int, axis=0)
             Sxy_1d = np.average(Sxy_int, axis=0)
             mf_px_alt = Utilities.mom_flux_p_alt(pre_1d, eta_1d, self.L0, self.N)
-            mf_vx_alt = Utilities.mom_flux_v_alt(Sxx_1d, Sxy_1d, eta_1d, self.L0, self.N, self.mu2)
+            mf_vx_alt = Utilities.mom_flux_v_alt(
+                Sxx_1d, Sxy_1d, eta_1d, self.L0, self.N, self.mu2
+            )
             #
             # compute amplitude
             #
@@ -686,35 +716,45 @@ class DataProcessor:
                 ux_air_1d_wf,
                 zplot_air,
                 zeta_air,
-            ] = CoordinateConverter.cart_to_wf(ux_2d_air, eta_1d, self.N, self.L0, self.k_, eta_m0)
+            ] = CoordinateConverter.cart_to_wf(
+                ux_2d_air, eta_1d, self.N, self.L0, self.k_, eta_m0
+            )
             # ux_air
             [
                 ux_wat_2d_wf,
                 ux_wat_1d_wf,
                 zplot_wat,
                 zeta_wat,
-            ] = CoordinateConverter.cart_to_wf(ux_2d_wat, eta_1d, self.N, self.L0, self.k_, eta_m0)
+            ] = CoordinateConverter.cart_to_wf(
+                ux_2d_wat, eta_1d, self.N, self.L0, self.k_, eta_m0
+            )
             # ux_wat
             [
                 pr_air_2d_wf,
                 pr_air_1d_wf,
                 zplot_air,
                 zeta_air,
-            ] = CoordinateConverter.cart_to_wf(pr_2d_air, eta_1d, self.N, self.L0, self.k_, eta_m0)
+            ] = CoordinateConverter.cart_to_wf(
+                pr_2d_air, eta_1d, self.N, self.L0, self.k_, eta_m0
+            )
             # pr_air (we do not need the one in water)
             [
                 di_air_2d_wf,
                 di_air_1d_wf,
                 zplot_air,
                 zeta_air,
-            ] = CoordinateConverter.cart_to_wf(di_2d_air, eta_1d,self.N, self.L0, self.k_, eta_m0)
+            ] = CoordinateConverter.cart_to_wf(
+                di_2d_air, eta_1d, self.N, self.L0, self.k_, eta_m0
+            )
             # di_air
             [
                 di_wat_2d_wf,
                 di_wat_1d_wf,
                 zplot_wat,
                 zeta_wat,
-            ] = CoordinateConverter.cart_to_wf(di_2d_wat, eta_1d,self.N, self.L0, self.k_, eta_m0)
+            ] = CoordinateConverter.cart_to_wf(
+                di_2d_wat, eta_1d, self.N, self.L0, self.k_, eta_m0
+            )
             # di_wat
             #
 
@@ -729,7 +769,9 @@ class DataProcessor:
 
             print("Final print of glo_obs alt")
             f = open(f"glo_obs_post_alt__{direction}_{custar_suffix}.out", "a")
-            f.write(f"{1.0 * istep:.15f} {time:.15f} {mf_px_alt:.15f} {mf_vx_alt:.15f} \n")
+            f.write(
+                f"{1.0 * istep:.15f} {time:.15f} {mf_px_alt:.15f} {mf_vx_alt:.15f} \n"
+            )
             f.flush()
             f.close()
 
@@ -763,13 +805,13 @@ class DataProcessor:
             pass
 
 
-
 # for Graphs.ipynb
 
 
 class DataPlotter:
     def __init__(self):
         pass
+
     # Define different symbols for forward and backward directions
     markers = {"forward": "o", "backward": "x"}
 
@@ -780,8 +822,10 @@ class DataPlotter:
         g = int(g * factor)
         b = int(b * factor)
         return f"#{r:02x}{g:02x}{b:02x}"
-    
-    def plot_data_color(self, ax, istep, time, direction, color, marker, custar_suffix, data_type):
+
+    def plot_data_color(
+        self, ax, istep, time, direction, color, marker, custar_suffix, data_type
+    ):
         """
         Plot data with specific color and marker based on direction, custar_suffix, and data type (air or water).
 
@@ -801,10 +845,10 @@ class DataPlotter:
             if os.path.exists(filename_wf):
                 data_wf = np.loadtxt(filename_wf)
 
-                if data_type == 'air':
+                if data_type == "air":
                     zeta = data_wf[:, 0]
                     ux_1d_wf = data_wf[:, 2]
-                elif data_type == 'water':
+                elif data_type == "water":
                     zeta = data_wf[:, 1]
                     ux_1d_wf = data_wf[:, 3]
                 else:
@@ -825,8 +869,9 @@ class DataPlotter:
                     alpha=0.5,
                 )
 
-
-    def plot_data(self, ax, istep, time, direction, cmap, norm, custar_suffix, data_type):
+    def plot_data(
+        self, ax, istep, time, direction, cmap, norm, custar_suffix, data_type
+    ):
         """
         Plots data (air or water properties) for various time steps on a matplotlib Axes.
 
@@ -846,10 +891,10 @@ class DataPlotter:
             if os.path.exists(filename_wf):
                 data_wf = np.loadtxt(filename_wf)
 
-                if data_type == 'air':
+                if data_type == "air":
                     zeta = data_wf[:, 0]
                     ux_1d_wf = data_wf[:, 2]
-                elif data_type == 'water':
+                elif data_type == "water":
                     zeta = data_wf[:, 1]
                     ux_1d_wf = data_wf[:, 3]
                 else:
@@ -857,7 +902,9 @@ class DataPlotter:
 
                 ax.plot(zeta, ux_1d_wf, color=cmap(norm(t)))
 
-    def plot_data_color(self, ax, istep, time, direction, color, marker, custar_suffix, data_type):
+    def plot_data_color(
+        self, ax, istep, time, direction, color, marker, custar_suffix, data_type
+    ):
         """
         Plot data with specific color and marker based on direction, custar_suffix, and data type (air or water).
 
@@ -876,11 +923,11 @@ class DataPlotter:
             filename_wf = f"wave_coord_{direction}_{custar_suffix}/prof_wf_{direction}_{custar_suffix}{formatted_i}.out"
             if os.path.exists(filename_wf):
                 data_wf = np.loadtxt(filename_wf)
-                
-                if data_type == 'air':
+
+                if data_type == "air":
                     zeta = data_wf[:, 0]
                     ux_1d_wf = data_wf[:, 2]
-                elif data_type == 'water':
+                elif data_type == "water":
                     zeta = data_wf[:, 1]
                     ux_1d_wf = data_wf[:, 3]
                 else:
@@ -890,16 +937,15 @@ class DataPlotter:
                 if t == time[-1]:
                     color = self.darken_color(color)
                 ax.plot(
-                    zeta, 
-                    ux_1d_wf, 
-                    color=color, 
-                    marker=marker, 
-                    markersize=7, 
-                    label=label, 
-                    linewidth=0.5, 
-                    alpha=0.5
+                    zeta,
+                    ux_1d_wf,
+                    color=color,
+                    marker=marker,
+                    markersize=7,
+                    label=label,
+                    linewidth=0.5,
+                    alpha=0.5,
                 )
-
 
     def process_and_plot(work_dir, ax, cmap_name):
         custar_value = self.extract_custar_from_dir(work_dir)
@@ -929,4 +975,3 @@ class DataPlotter:
 
         cbar.set_ticks(np.linspace(0, 1, len(sampled_times)))
         cbar.set_ticklabels([f"{time:.2f}" for time in sampled_times])
-
