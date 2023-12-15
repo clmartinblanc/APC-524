@@ -1,13 +1,9 @@
 import cv2
-import matplotlib.pyplot as plt
-from matplotlib import colors
 import numpy as np
 from os.path import join, splitext
 from os import listdir
 import pandas as pd
-import sys
 import os
-import importlib
 
 
 def edge_detection(data_structure, n: int):
@@ -28,8 +24,8 @@ def edge_detection(data_structure, n: int):
 
     # x,y coordinates and radius
     x = np.zeros(len(im_list))
-    y = x
-    r = x
+    y = np.zeros(len(im_list))
+    r = np.zeros(len(im_list))
 
     for i in np.arange(0, len(im_list), 1):
         # read in image and convert to grayscale
@@ -54,10 +50,10 @@ def edge_detection(data_structure, n: int):
             detected_circles = np.uint16(np.around(detected_circles))
 
             for pt in detected_circles[0, :]:
-                a, b, r = pt[0], pt[1], pt[2]
-
+                a, b, c = pt[0], pt[1], pt[2]
                 x[i] = a
                 y[i] = b
+                r[i] = c
 
     # Convert arrays to datatable
     d = {"x": x, "y": y, "r": r}

@@ -4,7 +4,7 @@ from os.path import splitext
 import numpy as np
 
 
-class data(abc.ABC):
+class Data(abc.ABC):
     @abc.abstractmethod
     def __init__(self, data_path, extension):
         self.data_path = data_path
@@ -15,7 +15,7 @@ class data(abc.ABC):
         pass
 
 
-class VideoData(data):
+class VideoData(Data):
     def __init__(self, data_path, save_path, extension):
         VideoData.data_path = data_path
         VideoData.save_path = save_path
@@ -33,7 +33,7 @@ class VideoData(data):
         ]
 
     def output_files(self):
-        return listdir(self.save_path)
+        return [splitext(f)[0] for f in listdir(self.save_path) if f.endswith(".csv")]
 
     def number_cases(self):
         return len(self.data_folders)
@@ -68,7 +68,7 @@ class VideoData(data):
         script(self)
 
 
-class TableData(data):
+class TableData(Data):
     def __init__(self, data_path, extension):
         TableData.data_path = data_path
         TableData.extension = extension
@@ -85,12 +85,11 @@ class TableData(data):
         lines = readed.split("\n")
         data = [line.split(",") for line in lines]
 
+        # remove empty last row
+        if data[len(data) - 1] == [""]:
+            data = data[1 : len(data) - 2]
         # convert string numbers to float
         for i in range(1, len(data)):
             data[i] = [float(x) for x in data[i]]
 
         return data
-
-
-def test():
-    print("TEST FUNCTION RAN")

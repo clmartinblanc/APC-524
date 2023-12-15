@@ -33,7 +33,7 @@ class VideoData(Data):
         ]
 
     def output_files(self):
-        return listdir(self.save_path)
+        return [splitext(f)[0] for f in listdir(self.save_path) if f.endswith(".csv")]
 
     def number_cases(self):
         return len(self.data_folders)
