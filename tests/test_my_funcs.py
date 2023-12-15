@@ -2,6 +2,7 @@ from __future__ import annotations
 import os
 import sys
 import types
+import numpy as np
 
 
 # have my_funcs, was having issues getting python to find it
@@ -40,3 +41,13 @@ def test_func_existance():
     assert isinstance(DataProcessor.process_data, types.FunctionType)
     assert isinstance(DataPlotter.process_and_plot, types.FunctionType)
     assert isinstance(exponential_func, types.FunctionType)
+
+
+# testing that pol2cart works correctly
+def test_pol2cart():
+    assert CoordinateConverter.pol2cart(1, 0) == (1, 0)
+    assert CoordinateConverter.pol2cart(0, 0) == (0, 0)
+    assert CoordinateConverter.pol2cart(0, 1) == (0, 0)
+    x, y = CoordinateConverter.pol2cart(1, np.pi)
+    assert round(x, 5) == -1
+    assert round(y, 5) == 0
