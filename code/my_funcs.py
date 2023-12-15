@@ -838,18 +838,9 @@ class DataPlotter:
             filename_wf = f"wave_coord_{direction}_{custar_suffix}/prof_wf_{direction}_{custar_suffix}{formatted_i}.out"
             if os.path.exists(filename_wf):
                 data_wf = np.loadtxt(filename_wf)
+                zeta, ux_1d_wf = self.get_zeta_ux(data_wf, data_type)
 
-                if data_type == "air":
-                    zeta = data_wf[:, 0]
-                    ux_1d_wf = data_wf[:, 2]
-                elif data_type == "water":
-                    zeta = data_wf[:, 1]
-                    ux_1d_wf = data_wf[:, 3]
-                else:
-                    raise ValueError("Invalid data type. Choose 'air' or 'water'.")
-
-                label = f"{direction} custar {custar_suffix} at time {t}"
-                # Oscurece el color si es el último tiempo
+                # Darken color for the last time
                 if t == time[-1]:
                     color = self.darken_color(color)
                 ax.plot(
@@ -858,10 +849,22 @@ class DataPlotter:
                     color=color,
                     marker=marker,
                     markersize=7,
-                    label=label,
+                    label=f"{direction} custar {custar_suffix} at time {t}",
                     linewidth=0.5,
                     alpha=0.5,
                 )
+
+    @staticmethod
+    def get_zeta_ux(data_wf, data_type):
+        """
+        Extracts zeta and ux_1d_wf from the data array based on the data type.
+        """
+        if data_type == "air":
+            return data_wf[:, 0], data_wf[:, 2]
+        elif data_type == "water":
+            return data_wf[:, 1], data_wf[:, 3]
+        else:
+            raise ValueError("Invalid data type. Choose 'air' or 'water'.")
 
     def plot_data(
         self, ax, istep, time, direction, cmap, norm, custar_suffix, data_type
@@ -947,7 +950,7 @@ class DataPlotter:
 
         df = self.process_data(work_dir)
 
-        # Filter times to reduce overlap
+        # Filtrar tiempos para reducir la superposición
         unique_times = df["t"].unique()
         sampled_times = unique_times[::5]
 
@@ -958,6 +961,13 @@ class DataPlotter:
             ux_means = df_time["ux_mean"].values[0]
             ax.plot(y, ux_means / ustar, color=cmap(idx), lw=1.0, linestyle="-")
 
+        self.add_colorbar(ax, cmap, sampled_times)
+
+    @staticmethod
+    def add_colorbar(ax, cmap, sampled_times):
+        """
+        Adds a colorbar to the plot.
+        """
         cbar = plt.colorbar(
             plt.cm.ScalarMappable(cmap=cmap),
             ax=ax,
@@ -966,6 +976,5 @@ class DataPlotter:
             pad=0.05,
         )
         cbar.set_label("Time", size=12)
-
         cbar.set_ticks(np.linspace(0, 1, len(sampled_times)))
         cbar.set_ticklabels([f"{time:.2f}" for time in sampled_times])
