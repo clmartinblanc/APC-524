@@ -533,7 +533,6 @@ class DataProcessor:
         return df_glo_obs, df_glo_obs_alt
 
     def process_directory(self):
-
         """
         This function takes a directory and save the data in files
         """
@@ -820,7 +819,7 @@ class DataPlotter:
         g = int(g * factor)
         b = int(b * factor)
         return f"#{r:02x}{g:02x}{b:02x}"
-    
+
     @staticmethod
     def get_zeta_ux(data_wf, data_type):
         """
