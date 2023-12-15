@@ -4,6 +4,11 @@ import scipy
 import gc
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
+import numpy as np
+import pandas as pd
+import os
+import re
+from scipy.interpolate import griddata
 
 import pandas as pd
 import numpy as np
@@ -21,6 +26,7 @@ import matplotlib as mpl
 
 
 class CoordinateConverter:
+    @staticmethod
     def pol2cart(rho, phi):
         """
         This function takes in polar coordinates (rho, phi) and converts them
@@ -41,7 +47,7 @@ class CoordinateConverter:
         x = rho * np.cos(phi)
         y = rho * np.sin(phi)
         return x, y
-
+    @staticmethod
     def cart_to_wf(p_2d, eta_1d, N, L0, k_, eta_m0):
         """
         p is 2d (in the x, z), eta is 1d (only x)
@@ -64,6 +70,11 @@ class CoordinateConverter:
             # average along the x direction
         #
         return p_2d_interp, p_1d_interp, zplot, zeta
+    def interp_2d(xdata, zdata, xtile, ztile, fld):
+        fld_int = griddata(
+            (xdata.ravel(), zdata.ravel()), fld.ravel(), (xtile, ztile), method="nearest"
+        )
+        return fld_int
 
 
 class SpectrumAnalyzer:
@@ -251,16 +262,6 @@ def phase_partion(ux, uy, f, s1_exp, s2_exp):
     return ux_air, ux_water, uy_air, uy_water
 
 
-#
-def interp_2d(xdata, zdata, xtile, ztile, fld):
-    fld_int = griddata(
-        (xdata.ravel(), zdata.ravel()), fld.ravel(), (xtile, ztile), method="nearest"
-    )
-    return fld_int
-
-
-#
-
 
 class FileHandler:
     @staticmethod
@@ -381,8 +382,6 @@ class Utilities:
         return ak
 
 
-#
-
 
 def exponential_func(x, a, b):
     return a * np.exp(b * x)
@@ -390,276 +389,288 @@ def exponential_func(x, a, b):
 
 # for Save_data.ipynb
 
-# common for all cases
-L0 = 2.0 * np.pi
-h = 1
-u_s = 0.25
-N = 512
-k_ = 4
-rho_r = 1000 / 1.225
-Re_tau = 720
-rho1 = 1
-rho2 = rho1 / rho_r
-mu2 = rho2 * u_s * (L0 - h) / Re_tau
-tot_row = 18
+class DataProcessor:
+    def __init__(self, work_dir, L0=2*np.pi, N=512, tot_row=18, k_=4, u_s=0.25, rho_r=1000 / 1.225, Re_tau=720, h=1):
+        self.work_dir = work_dir
+        self.L0 = L0
+        self.N = N
+        self.tot_row = tot_row
+        self.k_ = k_
+        self.u_s = u_s
+        self.rho_r = rho_r
+        self.Re_tau = Re_tau
+        self.h = h
+        self.rho1 = 1
+        self.rho2 = self.rho1 / self.rho_r
+        self.mu2 = self.rho2 * self.u_s * (self.L0 - self.h) / self.Re_tau  
 
 
-def extract_custar_from_dir(work_dir):
-    """
-    Extract the value of c/ustar from the file name.
-    """
+    def extract_custar_from_dir(self):
+        """
+        Extract the value of c/ustar from the file name.
+        """
 
-    match = re.search(r"custar(\d+)", work_dir)
-    if match:
-        return match.group(1)
-    return "Unknown"
+        match = re.search(r"custar(\d+)", self.work_dir)
+        return match.group(1) if match else "Unknown"
 
+    def extract_direction_from_dir(self):
+        """
+        Extract wind direction from the file name.
+        """
+        match = re.search(r"(forward|backward)", self.work_dir)
+        return match.group(1) if match else "Unknown"
 
-def extract_direction_from_dir(work_dir):
-    """
-    Extract wind direction from the file name.
-    """
-    match = re.search(r"(forward|backward)", work_dir)
-    if match:
-        return match.group(1)
-    return "Unknown"
+    def process_directory(self):
+        custar_suffix = self.extract_custar_from_dir(work_dir)
+        # custar_suffix = os.path.basename(os.path.normpath(work_dir)).split("custar")[1]
+        # direction = os.path.basename(os.path.normpath(work_dir)) # 'forward' o 'backward'
+        direction = self.extract_direction_from_dir(work_dir)
 
+        time_fld = pd.read_csv(work_dir + "field/log_field.out", header=None, sep=" ")
+        time_fld = time_fld.to_numpy()
 
-def process_directory(work_dir, L0, N, tot_row, k_, mu2):
-    custar_suffix = extract_custar_from_dir(work_dir)
-    # custar_suffix = os.path.basename(os.path.normpath(work_dir)).split("custar")[1]
-    # direction = os.path.basename(os.path.normpath(work_dir)) # 'forward' o 'backward'
-    direction = extract_direction_from_dir(work_dir)
+        time_eta = pd.read_csv(work_dir + "eta/global_int.out", header=None, sep=" ")
+        time_eta = time_eta.to_numpy()
 
-    time_fld = pd.read_csv(work_dir + "field/log_field.out", header=None, sep=" ")
-    time_fld = time_fld.to_numpy()
+        x_int = np.linspace(-self.L0 / 2, self.L0 / 2, self.N, endpoint=False) + self.L0 / self.N / 2
+        z_int = np.linspace(-self.L0 / 2, self.L0 / 2, self.N, endpoint=False) + self.L0 / self.N / 2
+        x_til, z_til = np.meshgrid(x_int, z_int)
 
-    time_eta = pd.read_csv(work_dir + "eta/global_int.out", header=None, sep=" ")
-    time_eta = time_eta.to_numpy()
-
-    x_int = np.linspace(-L0 / 2, L0 / 2, N, endpoint=False) + L0 / N / 2
-    z_int = np.linspace(-L0 / 2, L0 / 2, N, endpoint=False) + L0 / N / 2
-    x_til, z_til = np.meshgrid(x_int, z_int)
-
-    for i in range(len(time_fld)):
-        #
-        # define the time and row
-        #
-        time = time_fld[i, 0]
-        istep = int(time_fld[i, 1])
-        istep_c = f"{istep:09d}"
-        print("****************")
-        print(istep, time, i)
-        print("****************")
-        #
-        # load eta_loc
-        #
-        etalo = np.fromfile(work_dir + "eta/eta_loc/eta_loc_t" + istep_c + ".bin")
-        size = etalo.shape
-        tot_row_i = int(size[0] / tot_row)
-        print(tot_row_i)
-        etalo = etalo.reshape([tot_row_i, tot_row])
-        #
-        # we remove bubbles for interpolate interface
-        #
-        print("First pass of remove")
-        eta_m0 = 1.0
-        cirp_th = 0.20
-        new_row = 0
-        for i in range(tot_row_i):
-            if abs(etalo[i][12] - eta_m0) < cirp_th:
-                new_row += 1
-        #
-        print("Second pass of remove")
-        etal = np.zeros([new_row, 18])
-        for i in range(new_row):
-            if abs(etalo[i][12] - eta_m0) < cirp_th:
-                etal[i][:] = etalo[i][:]
-        #
-        print("Assign array")
-        xpo = etal[:, 0]
-        zpo = etal[:, 1]
-        pre = etal[:, 2]
-        Sxx = etal[:, 3]
-        Syy = etal[:, 4]
-        Szz = etal[:, 5]
-        Sxy = etal[:, 6]
-        Sxz = etal[:, 7]
-        Syz = etal[:, 8]
-        uxi = etal[:, 9]
-        uyi = etal[:, 10]
-        uzi = etal[:, 11]
-        eta = etal[:, 12]
-        eps = etal[:, 13]
-        n_x = etal[:, 14]
-        n_y = etal[:, 15]
-        n_z = etal[:, 16]
-        #
-        # we interpolate eta on a 2D cartesian grid with equidistant spacing equal to the printing resolution (2**9)
-        #
-        print("Interpolation to a Cartesian grid")
-        pre_int = interp_2d(xpo, zpo, x_til, z_til, pre)
-        Sxx_int = interp_2d(xpo, zpo, x_til, z_til, Sxx)
-        Syy_int = interp_2d(xpo, zpo, x_til, z_til, Syy)
-        Szz_int = interp_2d(xpo, zpo, x_til, z_til, Szz)
-        Sxy_int = interp_2d(xpo, zpo, x_til, z_til, Sxy)
-        Sxz_int = interp_2d(xpo, zpo, x_til, z_til, Sxz)
-        Syz_int = interp_2d(xpo, zpo, x_til, z_til, Syz)
-        uxi_int = interp_2d(xpo, zpo, x_til, z_til, uxi)
-        uyi_int = interp_2d(xpo, zpo, x_til, z_til, uyi)
-        uzi_int = interp_2d(xpo, zpo, x_til, z_til, uzi)
-        eta_int = interp_2d(xpo, zpo, x_til, z_til, eta)
-        eps_int = interp_2d(xpo, zpo, x_til, z_til, eps)
-        n_x_int = interp_2d(xpo, zpo, x_til, z_til, n_x)
-        n_y_int = interp_2d(xpo, zpo, x_til, z_til, n_y)
-        n_z_int = interp_2d(xpo, zpo, x_til, z_til, n_z)
-        #
-        # compute momentum and energy fluxes
-        #
-        print("Compute momentum flux - pressure")
-        [mf_px, mf_py, mf_pz] = mom_flux_p(pre_int, n_x_int, n_y_int, n_z_int)
-        print("Compute momentum flux - viscous dissipation")
-        [mf_vx, mf_vy, mf_vz] = mom_flux_v(
-            Sxx_int,
-            Sxy_int,
-            Sxz_int,
-            Syy_int,
-            Syz_int,
-            Szz_int,
-            n_x_int,
-            n_y_int,
-            n_z_int,
-            mu2,
-        )
-        print("Energy flux - pressure")
-        en_p = ene_flux_p(pre_int, uxi_int, uyi_int, uzi_int, n_x_int, n_y_int, n_z_int)
-        print("Energy flux - viscous dissipation")
-        en_v = ene_flux_v(
-            Sxx_int,
-            Sxy_int,
-            Sxz_int,
-            Syy_int,
-            Syz_int,
-            Szz_int,
-            uxi_int,
-            uyi_int,
-            uzi_int,
-            n_x_int,
-            n_y_int,
-            n_z_int,
-            mu2,
-        )
-        #
-        # compute stress budget (pressure and viscous term)
-        #
-        eta_1d = np.average(eta_int, axis=0) - np.average(eta)
-        pre_1d = np.average(pre_int, axis=0) - np.average(pre)
-        Sxx_1d = np.average(Sxx_int, axis=0)
-        Sxy_1d = np.average(Sxy_int, axis=0)
-        mf_px_alt = mom_flux_p_alt(pre_1d, eta_1d, L0, N)
-        mf_vx_alt = mom_flux_v_alt(Sxx_1d, Sxy_1d, eta_1d, L0, N, mu2)
-        #
-        # compute amplitude
-        #
-        ak = get_amp(eta_int, k_, L0)
-        #
-        # load the 2d span-averaged binary files
-        #
-        print("Load field and phase partition")
-        fv_2d = return_file(work_dir, "fv", istep_c, N, 1)
-        ux_2d = return_file(work_dir, "ux", istep_c, N, 1)
-        uy_2d = return_file(work_dir, "uy", istep_c, N, 1)
-        pr_2d = return_file(work_dir, "pr", istep_c, N, 1)
-        di_2d = return_file(work_dir, "di", istep_c, N, 1)
-        [ux_2d_air, ux_2d_wat, uy_2d_air, uy_2d_wat] = phase_partion(
-            ux_2d, uy_2d, fv_2d, 1.0, 1.0
-        )
-        [pr_2d_air, pr_2d_wat, di_2d_air, di_2d_wat] = phase_partion(
-            pr_2d, di_2d, fv_2d, 1.0, 1.0
-        )
-        #
-        eta_m0 = 1
-        print("From cartesian to wf")
-        [
-            ux_air_2d_wf,
-            ux_air_1d_wf,
-            zplot_air,
-            zeta_air,
-        ] = CoordinateConverter.cart_to_wf(ux_2d_air, eta_1d, N, L0, k_, eta_m0)
-        # ux_air
-        [
-            ux_wat_2d_wf,
-            ux_wat_1d_wf,
-            zplot_wat,
-            zeta_wat,
-        ] = CoordinateConverter.cart_to_wf(ux_2d_wat, eta_1d, N, L0, k_, eta_m0)
-        # ux_wat
-        [
-            pr_air_2d_wf,
-            pr_air_1d_wf,
-            zplot_air,
-            zeta_air,
-        ] = CoordinateConverter.cart_to_wf(pr_2d_air, eta_1d, N, L0, k_, eta_m0)
-        # pr_air (we do not need the one in water)
-        [
-            di_air_2d_wf,
-            di_air_1d_wf,
-            zplot_air,
-            zeta_air,
-        ] = CoordinateConverter.cart_to_wf(di_2d_air, eta_1d, N, L0, k_, eta_m0)
-        # di_air
-        [
-            di_wat_2d_wf,
-            di_wat_1d_wf,
-            zplot_wat,
-            zeta_wat,
-        ] = CoordinateConverter.cart_to_wf(di_2d_wat, eta_1d, N, L0, k_, eta_m0)
-        # di_wat
-        #
-
-        print("Final print of glo_obs")
-        f = open(f"glo_obs_post__{direction}_{custar_suffix}.out", "a")
-        f.write(
-            "%.15f %.15f %.15f %.15f %.15f %.15f %.15f %.15f \n"
-            % (1.0 * istep, time, ak, mf_px, mf_py, mf_pz, en_p, en_v)
-        )
-        f.flush()
-        f.close()
-
-        print("Final print of glo_obs alt")
-        f = open(f"glo_obs_post_alt__{direction}_{custar_suffix}.out", "a")
-        f.write(f"{1.0 * istep:.15f} {time:.15f} {mf_px_alt:.15f} {mf_vx_alt:.15f} \n")
-        f.flush()
-        f.close()
-
-        print("Final print of wf")
-        # Crear la carpeta si no existe
-        folder_name = f"wave_coord_{direction}_{custar_suffix}"
-        if not os.path.exists(folder_name):
-            os.makedirs(folder_name)
-
-        # Escribir el archivo dentro de la carpeta
-
-        filename = os.path.join(
-            folder_name, f"prof_wf_{direction}_{custar_suffix}{istep_c}.out"
-        )
-        f = open(filename, "w")
-        for i in range(N):
-            f.write(
-                "%.15f %.15f %.15f %.15f %.15f %.15f %.15f\n"
-                % (
-                    zeta_air[i],
-                    zeta_wat[i],
-                    ux_air_1d_wf[i],
-                    ux_wat_1d_wf[i],
-                    pr_air_1d_wf[i],
-                    di_wat_1d_wf[i],
-                    di_air_1d_wf[i],
-                )
+        for i in range(len(time_fld)):
+            #
+            # define the time and row
+            #
+            time = time_fld[i, 0]
+            istep = int(time_fld[i, 1])
+            istep_c = f"{istep:09d}"
+            print("****************")
+            print(istep, time, i)
+            print("****************")
+            #
+            # load eta_loc
+            #
+            etalo = np.fromfile(work_dir + "eta/eta_loc/eta_loc_t" + istep_c + ".bin")
+            size = etalo.shape
+            tot_row_i = int(size[0] / tot_row)
+            print(tot_row_i)
+            etalo = etalo.reshape([tot_row_i, tot_row])
+            #
+            # we remove bubbles for interpolate interface
+            #
+            print("First pass of remove")
+            eta_m0 = 1.0
+            cirp_th = 0.20
+            new_row = 0
+            for i in range(tot_row_i):
+                if abs(etalo[i][12] - eta_m0) < cirp_th:
+                    new_row += 1
+            #
+            print("Second pass of remove")
+            etal = np.zeros([new_row, 18])
+            for i in range(new_row):
+                if abs(etalo[i][12] - eta_m0) < cirp_th:
+                    etal[i][:] = etalo[i][:]
+            
+            print("Assign array")
+            xpo = etal[:, 0]
+            zpo = etal[:, 1]
+            pre = etal[:, 2]
+            Sxx = etal[:, 3]
+            Syy = etal[:, 4]
+            Szz = etal[:, 5]
+            Sxy = etal[:, 6]
+            Sxz = etal[:, 7]
+            Syz = etal[:, 8]
+            uxi = etal[:, 9]
+            uyi = etal[:, 10]
+            uzi = etal[:, 11]
+            eta = etal[:, 12]
+            eps = etal[:, 13]
+            n_x = etal[:, 14]
+            n_y = etal[:, 15]
+            n_z = etal[:, 16]
+            #
+            # we interpolate eta on a 2D cartesian grid with equidistant spacing equal to the printing resolution (2**9)
+            #
+            print("Interpolation to a Cartesian grid")
+            pre_int = CoordinateConverter.interp_2d(xpo, zpo, x_til, z_til, pre)
+            Sxx_int = CoordinateConverter.interp_2d(xpo, zpo, x_til, z_til, Sxx)
+            Syy_int = CoordinateConverter.interp_2d(xpo, zpo, x_til, z_til, Syy)
+            Szz_int = CoordinateConverter.interp_2d(xpo, zpo, x_til, z_til, Szz)
+            Sxy_int = CoordinateConverter.interp_2d(xpo, zpo, x_til, z_til, Sxy)
+            Sxz_int = CoordinateConverter.interp_2d(xpo, zpo, x_til, z_til, Sxz)
+            Syz_int = CoordinateConverter.interp_2d(xpo, zpo, x_til, z_til, Syz)
+            uxi_int = CoordinateConverter.interp_2d(xpo, zpo, x_til, z_til, uxi)
+            uyi_int = CoordinateConverter.interp_2d(xpo, zpo, x_til, z_til, uyi)
+            uzi_int = CoordinateConverter.interp_2d(xpo, zpo, x_til, z_til, uzi)
+            eta_int = CoordinateConverter.interp_2d(xpo, zpo, x_til, z_til, eta)
+            eps_int = CoordinateConverter.interp_2d(xpo, zpo, x_til, z_til, eps)
+            n_x_int = CoordinateConverter.interp_2d(xpo, zpo, x_til, z_til, n_x)
+            n_y_int = CoordinateConverter.interp_2d(xpo, zpo, x_til, z_til, n_y)
+            n_z_int = CoordinateConverter.interp_2d(xpo, zpo, x_til, z_til, n_z)
+            #
+            # compute momentum and energy fluxes
+            #
+            print("Compute momentum flux - pressure")
+            [mf_px, mf_py, mf_pz] = Utilities.mom_flux_p(pre_int, n_x_int, n_y_int, n_z_int)
+            print("Compute momentum flux - viscous dissipation")
+            [mf_vx, mf_vy, mf_vz] = Utilities.mom_flux_v(
+                Sxx_int,
+                Sxy_int,
+                Sxz_int,
+                Syy_int,
+                Syz_int,
+                Szz_int,
+                n_x_int,
+                n_y_int,
+                n_z_int,
+                mu2,
             )
-        f.flush()
-        f.close()
+            print("Energy flux - pressure")
+            en_p = Utilities.ene_flux_p(pre_int, uxi_int, uyi_int, uzi_int, n_x_int, n_y_int, n_z_int)
+            print("Energy flux - viscous dissipation")
+            en_v = Utilities.ene_flux_v(
+                Sxx_int,
+                Sxy_int,
+                Sxz_int,
+                Syy_int,
+                Syz_int,
+                Szz_int,
+                uxi_int,
+                uyi_int,
+                uzi_int,
+                n_x_int,
+                n_y_int,
+                n_z_int,
+                self.mu2,
+            )
+            #
+            # compute stress budget (pressure and viscous term)
+            #
+            eta_1d = np.average(eta_int, axis=0) - np.average(eta)
+            pre_1d = np.average(pre_int, axis=0) - np.average(pre)
+            Sxx_1d = np.average(Sxx_int, axis=0)
+            Sxy_1d = np.average(Sxy_int, axis=0)
+            mf_px_alt = Utilities.mom_flux_p_alt(pre_1d, eta_1d, self.L0, self.N)
+            mf_vx_alt = Utilities.mom_flux_v_alt(Sxx_1d, Sxy_1d, eta_1d, self.L0, self.N, self.mu2)
+            #
+            # compute amplitude
+            #
+            ak = Utilities.get_amp(eta_int, k_, L0)
+            #
+            # load the 2d span-averaged binary files
+            #
+            print("Load field and phase partition")
+            fv_2d = FileHandler.return_file(self.work_dir, "fv", istep_c, self.N, 1)
+            ux_2d = FileHandler.return_file(self.work_dir, "ux", istep_c, self.N, 1)
+            uy_2d = FileHandler.return_file(self.work_dir, "uy", istep_c, self.N, 1)
+            pr_2d = FileHandler.return_file(self.work_dir, "pr", istep_c, self.N, 1)
+            di_2d = FileHandler.return_file(self.work_dir, "di", istep_c, self.N, 1)
+            [ux_2d_air, ux_2d_wat, uy_2d_air, uy_2d_wat] = phase_partion(
+                ux_2d, uy_2d, fv_2d, 1.0, 1.0
+            )
+            [pr_2d_air, pr_2d_wat, di_2d_air, di_2d_wat] = phase_partion(
+                pr_2d, di_2d, fv_2d, 1.0, 1.0
+            )
+            #
+            eta_m0 = 1
+            print("From cartesian to wf")
+            [
+                ux_air_2d_wf,
+                ux_air_1d_wf,
+                zplot_air,
+                zeta_air,
+            ] = CoordinateConverter.cart_to_wf(ux_2d_air, eta_1d, N, L0, k_, eta_m0)
+            # ux_air
+            [
+                ux_wat_2d_wf,
+                ux_wat_1d_wf,
+                zplot_wat,
+                zeta_wat,
+            ] = CoordinateConverter.cart_to_wf(ux_2d_wat, eta_1d, N, L0, k_, eta_m0)
+            # ux_wat
+            [
+                pr_air_2d_wf,
+                pr_air_1d_wf,
+                zplot_air,
+                zeta_air,
+            ] = CoordinateConverter.cart_to_wf(pr_2d_air, eta_1d, N, L0, k_, eta_m0)
+            # pr_air (we do not need the one in water)
+            [
+                di_air_2d_wf,
+                di_air_1d_wf,
+                zplot_air,
+                zeta_air,
+            ] = CoordinateConverter.cart_to_wf(di_2d_air, eta_1d, N, L0, k_, eta_m0)
+            # di_air
+            [
+                di_wat_2d_wf,
+                di_wat_1d_wf,
+                zplot_wat,
+                zeta_wat,
+            ] = CoordinateConverter.cart_to_wf(di_2d_wat, eta_1d, N, L0, k_, eta_m0)
+            # di_wat
+            #
 
+            print("Final print of glo_obs")
+            f = open(f"glo_obs_post__{direction}_{custar_suffix}.out", "a")
+            f.write(
+                "%.15f %.15f %.15f %.15f %.15f %.15f %.15f %.15f \n"
+                % (1.0 * istep, time, ak, mf_px, mf_py, mf_pz, en_p, en_v)
+            )
+            f.flush()
+            f.close()
+
+            print("Final print of glo_obs alt")
+            f = open(f"glo_obs_post_alt__{direction}_{custar_suffix}.out", "a")
+            f.write(f"{1.0 * istep:.15f} {time:.15f} {mf_px_alt:.15f} {mf_vx_alt:.15f} \n")
+            f.flush()
+            f.close()
+
+            print("Final print of wf")
+            # Crear la carpeta si no existe
+            folder_name = f"wave_coord_{direction}_{custar_suffix}"
+            if not os.path.exists(folder_name):
+                os.makedirs(folder_name)
+
+            # Escribir el archivo dentro de la carpeta
+
+            filename = os.path.join(
+                folder_name, f"prof_wf_{direction}_{custar_suffix}{istep_c}.out"
+            )
+            f = open(filename, "w")
+            for i in range(N):
+                f.write(
+                    "%.15f %.15f %.15f %.15f %.15f %.15f %.15f\n"
+                    % (
+                        zeta_air[i],
+                        zeta_wat[i],
+                        ux_air_1d_wf[i],
+                        ux_wat_1d_wf[i],
+                        pr_air_1d_wf[i],
+                        di_wat_1d_wf[i],
+                        di_air_1d_wf[i],
+                    )
+                )
+            f.flush()
+            f.close()
+            pass
+
+
+
+
+# common for all cases
+#L0 = 2.0 * np.pi
+#h = 1
+#u_s = 0.25
+#N = 512
+#k_ = 4
+#rho_r = 1000 / 1.225
+#Re_tau = 720
+#rho1 = 1
+#rho2 = rho1 / rho_r
+#mu2 = rho2 * u_s * (L0 - h) / Re_tau
+#tot_row = 18
 
 # for Graphs.ipynb
 
@@ -711,69 +722,154 @@ def read_files_to_dfs(direction, custar_suffix):
     return df_glo_obs, df_glo_obs_alt
 
 
-def plot_data_air(ax, istep, time, direction, cmap, norm, custar_suffix):
-    """
-    Plots air property data for various time steps on a matplotlib Axes.
+import matplotlib.pyplot as plt
 
-    Parameters:
-    - ax (matplotlib.axes.Axes): Axes object for plotting.
-    - istep (iterable): Time steps for data files.
-    - time (iterable): Corresponding time values for color mapping.
-    - direction (str): Direction part of the filename.
-    - cmap (Colormap): Colormap for plot colors.
-    - norm (Normalize): Normalization for time values.
-    - custar_suffix (str): Suffix for the filename.
+class DataPlotter:
+    def __init__(self):
+        pass
+    # Define different symbols for forward and backward directions
+    markers = {"forward": "o", "backward": "x"}
 
-    The function reads data from specified files, extracts air properties,
-    and plots them on 'ax'. Each time step's data is colored using 'cmap'
-    and 'norm' based on the corresponding time value.
-    """
-    for i, t in zip(istep, time):
-        formatted_i = f"{int(i):09d}"
-        filename_wf = f"wave_coord_{direction}_{custar_suffix}/prof_wf_{direction}_{custar_suffix}{formatted_i}.out"
-        if os.path.exists(filename_wf):
-            data_wf = np.loadtxt(filename_wf)
-            zeta_air = data_wf[:, 0]
-            ux_air_1d_wf = data_wf[:, 2]
-            ax.plot(zeta_air, ux_air_1d_wf, color=cmap(norm(t)))
+    @staticmethod
+    def plot_data_air(ax, istep, time, direction, cmap, norm, custar_suffix):
+        """
+        Plots air property data for various time steps on a matplotlib Axes.
+
+        Parameters:
+        - ax (matplotlib.axes.Axes): Axes object for plotting.
+        - istep (iterable): Time steps for data files.
+        - time (iterable): Corresponding time values for color mapping.
+        - direction (str): Direction part of the filename.
+        - cmap (Colormap): Colormap for plot colors.
+        - norm (Normalize): Normalization for time values.
+        - custar_suffix (str): Suffix for the filename.
+
+        The function reads data from specified files, extracts air properties,
+        and plots them on 'ax'. Each time step's data is colored using 'cmap'
+        and 'norm' based on the corresponding time value.
+        """
+        for i, t in zip(istep, time):
+            formatted_i = f"{int(i):09d}"
+            filename_wf = f"wave_coord_{direction}_{custar_suffix}/prof_wf_{direction}_{custar_suffix}{formatted_i}.out"
+            if os.path.exists(filename_wf):
+                data_wf = np.loadtxt(filename_wf)
+                zeta_air = data_wf[:, 0]
+                ux_air_1d_wf = data_wf[:, 2]
+                ax.plot(zeta_air, ux_air_1d_wf, color=cmap(norm(t)))
+            pass
+
+    @staticmethod
+    def plot_data_air_color(ax, istep, time, direction, color, marker, custar_suffix):
+        """Plot data with specific color and marker based on direction and custar_suffix."""
+        for i, t in zip(istep, time):
+            formatted_i = f"{int(i):09d}"
+            filename_wf = f"wave_coord_{direction}_{custar_suffix}/prof_wf_{direction}_{custar_suffix}{formatted_i}.out"
+            if os.path.exists(filename_wf):
+                data_wf = np.loadtxt(filename_wf)
+                zeta_air = data_wf[:, 0]
+                ux_air_1d_wf = data_wf[:, 2]
+                label = f"{direction} custar {custar_suffix} at time {t}"
+                # Darken the color for the last time step
+                if t == time[-1]:
+                    color = darken_color(color)
+                ax.plot(
+                    zeta_air,
+                    ux_air_1d_wf,
+                    color=color,
+                    marker=marker,
+                    markersize=7,
+                    label=label,
+                    linewidth=0.5,
+                    alpha=0.5,
+                )
+            pass
+
+    # Puedes añadir otros métodos de trazado aquí
 
 
-def darken_color(color, factor=0.7):
-    """Darkens a given hexadecimal color."""
-    r, g, b = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
-    r = int(r * factor)
-    g = int(g * factor)
-    b = int(b * factor)
-    return f"#{r:02x}{g:02x}{b:02x}"
 
 
-def plot_data_air_color(ax, istep, time, direction, color, marker, custar_suffix):
-    """Plot data with specific color and marker based on direction and custar_suffix."""
-    for i, t in zip(istep, time):
-        formatted_i = f"{int(i):09d}"
-        filename_wf = f"wave_coord_{direction}_{custar_suffix}/prof_wf_{direction}_{custar_suffix}{formatted_i}.out"
-        if os.path.exists(filename_wf):
-            data_wf = np.loadtxt(filename_wf)
-            zeta_air = data_wf[:, 0]
-            ux_air_1d_wf = data_wf[:, 2]
-            label = f"{direction} custar {custar_suffix} at time {t}"
-            # Darken the color for the last time step
-            if t == time[-1]:
-                color = darken_color(color)
-            ax.plot(
-                zeta_air,
-                ux_air_1d_wf,
-                color=color,
-                marker=marker,
-                markersize=7,
-                label=label,
-                linewidth=0.5,
-                alpha=0.5,
-            )
+
+    def plot_data_air(ax, istep, time, direction, cmap, norm, custar_suffix):
+        """
+        Plots air property data for various time steps on a matplotlib Axes.
+
+        Parameters:
+        - ax (matplotlib.axes.Axes): Axes object for plotting.
+        - istep (iterable): Time steps for data files.
+        - time (iterable): Corresponding time values for color mapping.
+        - direction (str): Direction part of the filename.
+        - cmap (Colormap): Colormap for plot colors.
+        - norm (Normalize): Normalization for time values.
+        - custar_suffix (str): Suffix for the filename.
+
+        The function reads data from specified files, extracts air properties,
+        and plots them on 'ax'. Each time step's data is colored using 'cmap'
+        and 'norm' based on the corresponding time value.
+        """
+        for i, t in zip(istep, time):
+            formatted_i = f"{int(i):09d}"
+            filename_wf = f"wave_coord_{direction}_{custar_suffix}/prof_wf_{direction}_{custar_suffix}{formatted_i}.out"
+            if os.path.exists(filename_wf):
+                data_wf = np.loadtxt(filename_wf)
+                zeta_air = data_wf[:, 0]
+                ux_air_1d_wf = data_wf[:, 2]
+                ax.plot(zeta_air, ux_air_1d_wf, color=cmap(norm(t)))
 
 
-# Define different symbols for forward and backward directions
-markers = {"forward": "o", "backward": "x"}
+    def darken_color(color, factor=0.7):
+        """Darkens a given hexadecimal color."""
+        r, g, b = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
+        r = int(r * factor)
+        g = int(g * factor)
+        b = int(b * factor)
+        return f"#{r:02x}{g:02x}{b:02x}"
+
+    def plot_data_air_color(ax, istep, time, direction, color, marker, custar_suffix):
+        """Plot data with specific color and marker based on direction and custar_suffix."""
+        for i, t in zip(istep, time):
+            formatted_i = f"{int(i):09d}"
+            filename_wf = f"wave_coord_{direction}_{custar_suffix}/prof_wf_{direction}_{custar_suffix}{formatted_i}.out"
+            if os.path.exists(filename_wf):
+                data_wf = np.loadtxt(filename_wf)
+                zeta_air = data_wf[:, 0]
+                ux_air_1d_wf = data_wf[:, 2]
+                label = f"{direction} custar {custar_suffix} at time {t}"
+                # Darken the color for the last time step
+                if t == time[-1]:
+                    color = darken_color(color)
+                ax.plot(
+                    zeta_air,
+                    ux_air_1d_wf,
+                    color=color,
+                    marker=marker,
+                    markersize=7,
+                    label=label,
+                    linewidth=0.5,
+                    alpha=0.5,
+                )
+    def plot_data_water_color(ax, istep, time, direction, color, marker, custar_suffix):
+        for i, t in zip(istep, time):
+            formatted_i = f"{int(i):09d}"
+            filename_wf = f"wave_coord_{direction}_{custar_suffix}/prof_wf_{direction}_{custar_suffix}{formatted_i}.out"
+            if os.path.exists(filename_wf):
+                data_wf = np.loadtxt(filename_wf)
+                zeta_air = data_wf[:, 1]
+                ux_air_1d_wf = data_wf[:, 3]
+                label = f"{direction} custar {custar_suffix} at time {t}"
+                # Oscurece el color si es el último tiempo
+                if t == time[-1]:
+                    color = darken_color(color)
+                ax.plot(
+                    zeta_air,
+                    ux_air_1d_wf,
+                    color=color,
+                    marker=marker,
+                    markersize=7,
+                    label=label,
+                    linewidth=0.5,
+                    alpha=0.5,
+                )
 
 
 # Function to plot water data on a specific axis
@@ -790,16 +886,39 @@ def plot_water_data(ax, istep, time, direction, cmap, norm, suffix):
         # Plot the data on the provided Axes
         ax.plot(zeta_water, ux_water_1d_wf, color=cmap(norm(t)))
 
+def process_and_plot(work_dir, ax, cmap_name):
+    custar_value = extract_custar_from_dir(work_dir)
+    ax.set_title(f"c/ustar = {custar_value}")
 
-def darken_color(color, factor=0.7):
-    """Oscurece un color dado en formato hexadecimal."""
-    r, g, b = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
-    r = int(r * factor)
-    g = int(g * factor)
-    b = int(b * factor)
-    return f"#{r:02x}{g:02x}{b:02x}"
+    df = process_data(work_dir)
+
+    # Filtrar tiempos para reducir la superposición
+    unique_times = df["t"].unique()
+    sampled_times = unique_times[::5]
+
+    cmap = plt.get_cmap(cmap_name, len(sampled_times))
+
+    for idx, time in enumerate(sampled_times):
+        df_time = df[df["t"] == time]
+        ux_means = df_time["ux_mean"].values[0]
+        ax.plot(y, ux_means / ustar, color=cmap(idx), lw=1.0, linestyle="-")
+
+    cbar = plt.colorbar(
+        plt.cm.ScalarMappable(cmap=cmap),
+        ax=ax,
+        orientation="vertical",
+        fraction=0.05,
+        pad=0.05,
+    )
+    cbar.set_label("Time", size=12)
+
+    cbar.set_ticks(np.linspace(0, 1, len(sampled_times)))
+    cbar.set_ticklabels([f"{time:.2f}" for time in sampled_times])
 
 
+
+
+'''
 def plot_data_water_color(ax, istep, time, direction, color, marker, custar_suffix):
     for i, t in zip(istep, time):
         formatted_i = f"{int(i):09d}"
@@ -822,10 +941,9 @@ def plot_data_water_color(ax, istep, time, direction, color, marker, custar_suff
                 linewidth=0.5,
                 alpha=0.5,
             )
-
+'''
 
 # for postprocessing.ipynb
-
 
 def process_data(work_dir):
     N = 512
