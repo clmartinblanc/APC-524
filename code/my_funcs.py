@@ -1,15 +1,9 @@
 import os
 import re
 import numpy as np
-import math as m
 import matplotlib.pyplot as plt
 import pandas as pd
-import gc
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.linear_model import LinearRegression
-from scipy import signal, interpolate
-import sys
-from tqdm import tqdm
+import scipy
 
 
 class CoordinateConverter:
@@ -49,7 +43,9 @@ class CoordinateConverter:
         for i in range(N):  # For each x
             #
             z = np.linspace(-eta_m0, L0 - eta_m0, N, endpoint=False)
-            f = interp1d(z, p_2d[i, :], kind="quadratic", fill_value="extrapolate")
+            f = scipy.interp1d(
+                z, p_2d[i, :], kind="quadratic", fill_value="extrapolate"
+            )
             zeta = z
             zplot[i] = zeta + eta_1d[i] * np.exp(-1 * np.abs(zeta))
             p_2d_interp[i] = f(zplot[i])
@@ -60,7 +56,7 @@ class CoordinateConverter:
         return p_2d_interp, p_1d_interp, zplot, zeta
 
     def interp_2d(xdata, zdata, xtile, ztile, fld):
-        fld_int = griddata(
+        fld_int = scipy.interpolate.griddata(
             (xdata.ravel(), zdata.ravel()),
             fld.ravel(),
             (xtile, ztile),
@@ -164,9 +160,9 @@ class SpectrumAnalyzer:
             kyp_tile,
             theta_tile,
             theta,
-            variance,
-            integral,
-            polar_integral,
+            self.variance,
+            self.integral,
+            self.polar_integral,
             kx,
             ky,
         )
@@ -244,7 +240,7 @@ class SpectrumAnalyzer:
             return self.spectrum_integration_2d(data, N, L, CHECK)
         elif dimension == "3D":
             # Análisis 3D
-            return self.spectrum_integration_3d(data, L0, N, T, time)
+            return self.spectrum_integration_3d(data, self.L0, N, self.T, self.time)
         else:
             raise ValueError("Dimension must be '2D' or '3D'")
 
@@ -275,10 +271,10 @@ class FileHandler:
         #
         if is_2d == 1:
             pfile = common_path + "field/" + name + "_2d_avg_" + istep + ".bin"
-            file = load_bin(pfile, N, is_2d)
+            file = FileHandler.load_bin(pfile, N, is_2d)
         else:
             pfile = common_path + "field/" + name + "_3d_" + istep + ".bin"
-            file = load_bin(pfile, N, is_2d)
+            file = FileHandler.load_bin(pfile, N, is_2d)
         #
         return file
 
@@ -458,7 +454,7 @@ class DataProcessor:
                 -self.L0 / 2, self.L0 / 2, self.N, endpoint=False
             ) + self.L0 / (2 * self.N)
             xtile, ytile = np.meshgrid(xarray, xarray)
-            eta = griddata(
+            eta = scipy.interpolate.griddata(
                 (etal[:, 0], etal[:, 1]), etal[:, 12], (xtile, ytile), method="nearest"
             )
             self.eta_series[j] = eta
@@ -654,7 +650,7 @@ class DataProcessor:
                 n_x_int,
                 n_y_int,
                 n_z_int,
-                mu2,
+                self.mu2,
             )
             print("Energy flux - pressure")
             en_p = Utilities.ene_flux_p(
@@ -690,7 +686,7 @@ class DataProcessor:
             #
             # compute amplitude
             #
-            ak = Utilities.get_amp(eta_int, k_, L0)
+            ak = Utilities.get_amp(eta_int, self.k_, self.L0)
             #
             # load the 2d span-averaged binary files
             #
@@ -785,7 +781,7 @@ class DataProcessor:
                 folder_name, f"prof_wf_{direction}_{custar_suffix}{istep_c}.out"
             )
             f = open(filename, "w")
-            for i in range(N):
+            for i in range(self.N):
                 f.write(
                     "%.15f %.15f %.15f %.15f %.15f %.15f %.15f\n"
                     % (
@@ -945,7 +941,7 @@ class DataPlotter:
                     alpha=0.5,
                 )
 
-    def process_and_plot(work_dir, ax, cmap_name):
+    def process_and_plot(self, work_dir, ax, cmap_name):
         custar_value = self.extract_custar_from_dir(work_dir)
         ax.set_title(f"c/ustar = {custar_value}")
 
