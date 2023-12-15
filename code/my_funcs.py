@@ -1,25 +1,16 @@
-from scipy import *
+import os
+import re
 import numpy as np
-import scipy
+import math as m
+import matplotlib.pyplot as plt
+import pandas as pd
 import gc
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
-import numpy as np
-import pandas as pd
-import os
-import re
-from scipy.interpolate import griddata
-import matplotlib as mpl
-import pandas as pd
-import numpy as np
-import math as m
-from matplotlib import pyplot as plt
-from scipy.signal import butter, filtfilt, hilbert
-from scipy.interpolate import griddata, interp1d
-from scipy.signal import savgol_filter
-import matplotlib.pyplot as plt
-import sys, os
+from scipy import signal, interpolate
+import sys
 from tqdm import tqdm
+
 
 class CoordinateConverter:
     @staticmethod
