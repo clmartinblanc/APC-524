@@ -533,6 +533,10 @@ class DataProcessor:
         return df_glo_obs, df_glo_obs_alt
 
     def process_directory(self):
+
+        """
+        This function takes a directory and save the data in files
+        """
         custar_suffix = self.extract_custar_from_dir(self.work_dir)
         # custar_suffix = os.path.basename(os.path.normpath(work_dir)).split("custar")[1]
         # direction = os.path.basename(os.path.normpath(work_dir)) # 'forward' o 'backward'
@@ -816,6 +820,34 @@ class DataPlotter:
         g = int(g * factor)
         b = int(b * factor)
         return f"#{r:02x}{g:02x}{b:02x}"
+    
+    @staticmethod
+    def get_zeta_ux(data_wf, data_type):
+        """
+        Extracts zeta and ux_1d_wf from the data array based on the data type.
+        """
+        if data_type == "air":
+            return data_wf[:, 0], data_wf[:, 2]
+        elif data_type == "water":
+            return data_wf[:, 1], data_wf[:, 3]
+        else:
+            raise ValueError("Invalid data type. Choose 'air' or 'water'.")
+
+    @staticmethod
+    def add_colorbar(ax, cmap, sampled_times):
+        """
+        Adds a colorbar to the plot.
+        """
+        cbar = plt.colorbar(
+            plt.cm.ScalarMappable(cmap=cmap),
+            ax=ax,
+            orientation="vertical",
+            fraction=0.05,
+            pad=0.05,
+        )
+        cbar.set_label("Time", size=12)
+        cbar.set_ticks(np.linspace(0, 1, len(sampled_times)))
+        cbar.set_ticklabels([f"{time:.2f}" for time in sampled_times])
 
     def plot_data_color(
         self, ax, istep, time, direction, color, marker, custar_suffix, data_type
@@ -854,18 +886,6 @@ class DataPlotter:
                     alpha=0.5,
                 )
 
-    @staticmethod
-    def get_zeta_ux(data_wf, data_type):
-        """
-        Extracts zeta and ux_1d_wf from the data array based on the data type.
-        """
-        if data_type == "air":
-            return data_wf[:, 0], data_wf[:, 2]
-        elif data_type == "water":
-            return data_wf[:, 1], data_wf[:, 3]
-        else:
-            raise ValueError("Invalid data type. Choose 'air' or 'water'.")
-
     def plot_data(
         self, ax, istep, time, direction, cmap, norm, custar_suffix, data_type
     ):
@@ -887,62 +907,9 @@ class DataPlotter:
             filename_wf = f"wave_coord_{direction}_{custar_suffix}/prof_wf_{direction}_{custar_suffix}{formatted_i}.out"
             if os.path.exists(filename_wf):
                 data_wf = np.loadtxt(filename_wf)
-
-                if data_type == "air":
-                    zeta = data_wf[:, 0]
-                    ux_1d_wf = data_wf[:, 2]
-                elif data_type == "water":
-                    zeta = data_wf[:, 1]
-                    ux_1d_wf = data_wf[:, 3]
-                else:
-                    raise ValueError("Invalid data type. Choose 'air' or 'water'.")
-
+                zeta, ux_1d_wf = self.get_zeta_ux(data_wf, data_type)
                 ax.plot(zeta, ux_1d_wf, color=cmap(norm(t)))
-
-    def plot_data_color(
-        self, ax, istep, time, direction, color, marker, custar_suffix, data_type
-    ):
-        """
-        Plot data with specific color and marker based on direction, custar_suffix, and data type (air or water).
-
-        Parameters:
-        - ax (matplotlib.axes.Axes): Axes object for plotting.
-        - istep (iterable): Time steps for data files.
-        - time (iterable): Corresponding time values.
-        - direction (str): Wind direction ('forward' or 'backward').
-        - color (str): Color for the plot.
-        - marker (str): Marker style for the plot.
-        - custar_suffix (str): Suffix indicating specific c/ustar value.
-        - data_type (str): Type of data to plot ('air' or 'water').
-        """
-        for i, t in zip(istep, time):
-            formatted_i = f"{int(i):09d}"
-            filename_wf = f"wave_coord_{direction}_{custar_suffix}/prof_wf_{direction}_{custar_suffix}{formatted_i}.out"
-            if os.path.exists(filename_wf):
-                data_wf = np.loadtxt(filename_wf)
-
-                if data_type == "air":
-                    zeta = data_wf[:, 0]
-                    ux_1d_wf = data_wf[:, 2]
-                elif data_type == "water":
-                    zeta = data_wf[:, 1]
-                    ux_1d_wf = data_wf[:, 3]
-                else:
-                    raise ValueError("Invalid data type. Choose 'air' or 'water'.")
-
-                label = f"{direction} custar {custar_suffix} at time {t}"
-                if t == time[-1]:
-                    color = self.darken_color(color)
-                ax.plot(
-                    zeta,
-                    ux_1d_wf,
-                    color=color,
-                    marker=marker,
-                    markersize=7,
-                    label=label,
-                    linewidth=0.5,
-                    alpha=0.5,
-                )
+                ax.plot(zeta, ux_1d_wf, color=cmap(norm(t)))
 
     def process_and_plot(self, work_dir, ax, cmap_name):
         custar_value = self.extract_custar_from_dir(work_dir)
@@ -962,19 +929,3 @@ class DataPlotter:
             ax.plot(y, ux_means / ustar, color=cmap(idx), lw=1.0, linestyle="-")
 
         self.add_colorbar(ax, cmap, sampled_times)
-
-    @staticmethod
-    def add_colorbar(ax, cmap, sampled_times):
-        """
-        Adds a colorbar to the plot.
-        """
-        cbar = plt.colorbar(
-            plt.cm.ScalarMappable(cmap=cmap),
-            ax=ax,
-            orientation="vertical",
-            fraction=0.05,
-            pad=0.05,
-        )
-        cbar.set_label("Time", size=12)
-        cbar.set_ticks(np.linspace(0, 1, len(sampled_times)))
-        cbar.set_ticklabels([f"{time:.2f}" for time in sampled_times])
