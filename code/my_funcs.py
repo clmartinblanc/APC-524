@@ -408,6 +408,8 @@ class DataProcessor:
         self.rho1 = 1
         self.rho2 = self.rho1 / self.rho_r
         self.mu2 = self.rho2 * self.u_s * (self.L0 - self.h) / self.Re_tau
+        self.data = None
+        self.eta_series = None
 
     def extract_custar_from_dir(self):
         """
@@ -423,6 +425,70 @@ class DataProcessor:
         """
         match = re.search(r"(forward|backward)", self.work_dir)
         return match.group(1) if match else "Unknown"
+
+    def process_data(self):
+        text_data = np.loadtxt(os.path.join(self.work_dir, "eta/global_int.out"))
+        self.load_global_integrals()
+        self.process_eta_data()
+        self.process_velocity_and_pressure_data()
+
+    def load_global_integrals(self):
+        data = np.loadtxt(os.path.join(self.work_dir, "eta/global_int.out"))
+        self.istep_c, self.time = data[:, 1], data[:, 0]
+
+    def process_eta_data(self):
+        self.eta_series = np.zeros(
+            (len(self.istep_c), self.N, self.N), dtype=np.float32
+        )
+        for j, i in enumerate(self.istep_c):
+            etalo = np.fromfile(
+                os.path.join(self.work_dir, f"eta/eta_loc/eta_loc_t0000{int(i)}.bin")
+            ).reshape([-1, self.tot_row])
+
+            # Filtrado de datos
+            new_row_count = sum(np.abs(etalo[:, 12] - 1.0) < 0.20)
+            etal = np.zeros([new_row_count, 18])
+            row_idx = 0
+            for row in etalo:
+                if np.abs(row[12] - 1.0) < 0.20:
+                    etal[row_idx] = row
+                    row_idx += 1
+
+            xarray = np.linspace(
+                -self.L0 / 2, self.L0 / 2, self.N, endpoint=False
+            ) + self.L0 / (2 * self.N)
+            xtile, ytile = np.meshgrid(xarray, xarray)
+            eta = griddata(
+                (etal[:, 0], etal[:, 1]), etal[:, 12], (xtile, ytile), method="nearest"
+            )
+            self.eta_series[j] = eta
+
+    def process_velocity_and_pressure_data(self):
+        data_list = []
+        for i_int, t in zip(self.istep_c, self.time):
+            data_dict = self.process_individual_step(i_int, t)
+            data_list.append(data_dict)
+        self.data = pd.DataFrame(data_list)
+        self.data["eta"] = list(self.eta_series)
+
+    def process_individual_step(self, i_int, t):
+        data_dict = {"i": i_int, "t": t}
+        patterns = [
+            "ux_2d_avg_{:09d}.bin",
+            "uy_2d_avg_{:09d}.bin",
+            "uz_2d_avg_{:09d}.bin",
+            "fv_2d_avg_{:09d}.bin",
+            "pr_2d_avg_{:09d}.bin",
+        ]
+        for idx, pattern in enumerate(patterns):
+            filename = pattern.format(int(i_int))
+            file_path = os.path.join(self.work_dir + "field/", filename)
+            if os.path.exists(file_path):
+                array_data = np.fromfile(file_path).reshape((self.N, self.N))
+                key = pattern.split("_")[0]
+                data_dict[key] = array_data
+                data_dict[key + "_mean"] = np.average(array_data, axis=0)
+        return data_dict
 
     def read_files_to_dfs(direction, custar_suffix):
         """
@@ -469,74 +535,6 @@ class DataProcessor:
         df_glo_obs_alt["time"] = df_glo_obs_alt["time"] - df_glo_obs_alt["time"].iloc[0]
 
         return df_glo_obs, df_glo_obs_alt
-
-    def process_data(self):
-        # Leer el archivo de texto
-        data = np.loadtxt(os.path.join(self.work_dir, "eta/global_int.out"))
-        istep_c, time = data[:, 1], data[:, 0]
-
-        eta_series = np.zeros((istep_c.shape[0], self.N, self.N), dtype=np.float32)
-
-        for j, i in enumerate(istep_c):
-            etalo = np.fromfile(
-                os.path.join(self.work_dir, f"eta/eta_loc/eta_loc_t0000{int(i)}.bin")
-            )
-            etalo = etalo.reshape([int(etalo.size / 18), 18])
-
-            etal = [row for row in etalo if abs(row[12] - 1.0) < 0.20]
-            etal = np.array(etal)
-
-            xarray = np.linspace(
-                -self.L0 / 2, self.L0 / 2, N, endpoint=False
-            ) + self.L0 / (2 * self.N)
-            yarray = xarray  # Son iguales en este contexto
-            xtile, ytile = np.meshgrid(xarray, yarray)
-            eta = griddata(
-                (etal[:, 0].ravel(), etal[:, 1].ravel()),
-                etal[:, 12].ravel(),
-                (xtile, ytile),
-                method="nearest",
-            )
-
-            eta_series[j] = eta
-
-        patterns = [
-            "ux_2d_avg_{:09d}.bin",
-            "uy_2d_avg_{:09d}.bin",
-            "uz_2d_avg_{:09d}.bin",
-            "fv_2d_avg_{:09d}.bin",
-            "pr_2d_avg_{:09d}.bin",
-        ]
-        data_list = []
-
-        for i_int, t in zip(istep_c, time):
-            data_dict = {"i": i_int, "t": t}
-
-            for idx, pattern in enumerate(patterns):
-                filename = pattern.format(int(i_int))
-                file_path = os.path.join(self.work_dir + "field/", filename)
-
-                if os.path.exists(file_path):
-                    array_data = np.fromfile(file_path)
-                    reshaped_data = array_data.reshape((N, N))
-
-                    if idx == 0:
-                        data_dict["ux"] = reshaped_data
-                        data_dict["ux_mean"] = np.average(reshaped_data, axis=0)
-                    elif idx == 1:
-                        data_dict["uy"] = reshaped_data
-                        data_dict["uy_mean"] = np.average(reshaped_data, axis=0)
-                    elif idx == 2:
-                        data_dict["uz"] = reshaped_data
-                        data_dict["uz_mean"] = np.average(reshaped_data, axis=0)
-                    elif idx == 3:
-                        data_dict["fv"] = reshaped_data
-                    elif idx == 4:
-                        data_dict["pressure"] = reshaped_data
-
-            data_list.append(data_dict)
-
-        return pd.DataFrame(data_list)
 
     def process_directory(self):
         custar_suffix = self.extract_custar_from_dir(self.work_dir)
