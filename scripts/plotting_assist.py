@@ -6,10 +6,6 @@ Reorganizing the plotting stuff into a library of plotting tools that we can use
 """
 
 
-def add1(x):
-    return x + 1
-
-
 def vec_field_example(show=False):
     # creating mesh
     x, y = np.meshgrid(np.linspace(-4, 4, 10), np.linspace(-4, 4, 10))

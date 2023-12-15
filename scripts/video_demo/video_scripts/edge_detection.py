@@ -1,13 +1,9 @@
 import cv2
-import matplotlib.pyplot as plt
-from matplotlib import colors
 import numpy as np
 from os.path import join, splitext
 from os import listdir
 import pandas as pd
-import sys
 import os
-import importlib
 
 
 def edge_detection(data_structure, n: int):

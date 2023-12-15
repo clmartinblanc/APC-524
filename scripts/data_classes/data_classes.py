@@ -93,7 +93,3 @@ class TableData(data):
             data[i] = [float(x) for x in data[i]]
 
         return data
-
-
-def add2(x):
-    return x + 2
